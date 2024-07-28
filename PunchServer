@@ -1,0 +1,111 @@
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local players = game:GetService("Players")
+local plr = game.Players.LocalPlayer
+--gets replicated storage content
+
+local punchDebounces = {}
+
+--to check if the function is already running
+local punchDebounceDuration = 1.2
+
+local function punch(player)
+	print("Punch function called for player: " .. player.Name)
+	-- Gets player who threw the punch
+	local character = player.Character or player.CharacterAdded:Wait()
+	
+	if character == nil then return end
+	if not character:FindFirstChild("Humanoid") then return end
+	if character.Humanoid.Health == 0 then return end
+	-- Stops the function if the player is not there/humanoid or dead
+	if punchDebounces[player] then return end
+	punchDebounces[player] = true
+
+	local punchAnimation = character.Humanoid:FindFirstChildOfClass("Animator"):LoadAnimation(script.Punch)
+	-- Gets the animation
+	punchAnimation:Play()
+	task.wait(0.5)
+	
+	print("Creating hitbox for player: " .. player.Name)
+	-- Create hitbox and assign parent after defining all properties
+	local hitbox = Instance.new("Part")	
+	hitbox.Anchored = false
+	hitbox.CanCollide = false	
+	hitbox.Transparency = 0.5
+	hitbox.Size = Vector3.new(5, 6, 2.5)
+	hitbox.CFrame = character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -2)
+	hitbox.Parent = character.HumanoidRootPart
+
+	-- Create and configure weld constraint
+	local WeldConstraint = Instance.new("WeldConstraint")
+	WeldConstraint.Part0 = hitbox
+	WeldConstraint.Part1 = character.HumanoidRootPart
+	WeldConstraint.Parent = hitbox
+
+	-- Add hitbox to debris for automatic cleanup
+	game.Debris:AddItem(hitbox, 1)
+	
+	local Hits = {}
+	hitbox.Touched:Connect(function(hit)
+		--touched Event der Hitbox
+		if hit and hit.Parent then
+			--check if hit and parent is there
+			local hitHumanoid = hit.Parent:FindFirstChild("Humanoid")
+			--check for humanoid in hit part
+			if hitHumanoid and hit.Parent.Name ~= player.Name then
+				--prevent player from hitting himself
+				--print("Hit detected: " .. hit.Parent.Name)
+				if not hitHumanoid:FindFirstChild(character.Name) then
+					if Hits[hit.Parent.Name] then
+						--prevent double hit
+						--print("Hit already registered for: " .. hit.Parent.Name)
+						return
+					end
+					Hits[hit.Parent.Name] = true
+					--mark player hit
+					local sound = script.PunchSound:Clone()
+					sound.Parent = hit.Parent:FindFirstChild("Humanoid")
+					sound:Play()
+					game.Debris:AddItem(sound, 2)
+					hitHumanoid:TakeDamage(10)
+					--deal damage
+					
+					local humanoidRootPart = hitHumanoid.Parent:FindFirstChild("HumanoidRootPart")
+					local primaryPart = hitHumanoid.Parent.PrimaryPart
+					
+					
+					if humanoidRootPart and primaryPart then
+						local particle = script.PunchParticle:Clone()
+						particle.Parent = primaryPart
+						particle:Emit(30)
+
+						--insert ragdoll here
+
+						task.wait(1.2)
+						Hits[hit.Parent.Name] = nil
+						--remove player from hit list
+						if particle.Parent ~= nil then
+							particle:Destroy()
+						end
+						
+					end
+					
+					
+				end
+			end
+		else
+			print("Hit or hit.Parent is nil")
+		end
+	end)
+		
+	task.spawn(function()
+		task.wait(punchDebounceDuration)
+		-- Cooldown
+		punchDebounces[player] = nil
+	end)
+	
+end
+
+
+
+replicatedStorage.Punch.OnServerEvent:Connect(punch)
+-- Connects punch func to Punch anim
