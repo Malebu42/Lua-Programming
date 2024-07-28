@@ -1,0 +1,48 @@
+local PartsRainFolder = game.Workspace.PartsRainButtons
+
+for _, PartsRainButton in pairs (PartsRainFolder:GetChildren()) do
+	local pressed = false
+	PartsRainButton.Touched:Connect(function(touchPart)		
+		if pressed then return end
+		pressed = true
+		
+		local character = touchPart.Parent
+		local humanoid = character:FindFirstChild("Humanoid") 
+
+		if humanoid then
+			local root = character:FindFirstChild("HumanoidRootPart") 
+			if root then
+				print("test")
+				
+				local Debris = game:GetService("Debris")
+				local partCount = 0
+
+				while true do
+
+					partCount = partCount + 1
+
+					if partCount >= 400 then
+						break
+					end
+
+					local part = Instance.new("Part")
+					part.Parent = game.Workspace
+
+					local randomX = math.random(-200, 200)
+					local randomZ = math.random(-200, 200)
+
+					part.BrickColor = BrickColor.Green()
+					part.Position = Vector3.new(randomX, 50, randomZ)
+
+					Debris:AddItem(part, 20)
+					
+					task.wait()
+				end
+				
+			end
+		end
+		task.wait(1)
+		pressed = false
+	end)
+end
+
