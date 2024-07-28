@@ -1,0 +1,16 @@
+local uis = game:GetService("UserInputService")
+
+uis.InputBegan:Connect(function(input, gameProcessedEvent)
+	if input.KeyCode == Enum.KeyCode.LeftShift and not gameProcessedEvent then
+		print("pressed shift")
+		game.ReplicatedStorage:WaitForChild("Run"):FireServer(true)
+	end
+end)
+
+uis.InputEnded:Connect(function(input, gameProcessedEvent)
+	if input.KeyCode == Enum.KeyCode.LeftShift and not gameProcessedEvent then
+		print("released shift")
+		game.ReplicatedStorage:WaitForChild("Run"):FireServer(false)			
+	end    
+end)
+
