@@ -1,0 +1,44 @@
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local players = game:GetService("Players")
+
+--local runDebounces = {}
+
+local function run(player, isRunning)
+	local character = player.Character or player.CharacterAdded:Wait()
+	local humanoid = character:FindFirstChild("Humanoid")
+	--check for player
+
+	if character == nil then return end
+	if not character:FindFirstChild("Humanoid") then return end
+	if character.Humanoid.Health == 0 then return end
+
+	--if runDebounces[player] then return end
+	--runDebounces[player] = true
+
+	local runAnimation = character.Humanoid:FindFirstChildOfClass("Animator"):LoadAnimation(script.Run)
+	print("startRunning value:", isRunning)
+
+	print(humanoid:GetPlayingAnimationTracks())
+
+	if isRunning then
+		runAnimation:Play()
+		print("started running")
+		humanoid.WalkSpeed = 32
+
+	else
+		runAnimation:Stop(0)
+		print("stopped running")
+		humanoid.WalkSpeed = 16
+		for _, animationTrack in pairs(humanoid:GetPlayingAnimationTracks()) do
+			animationTrack:Stop()  -- Stops all animations
+		end
+	
+	end
+
+	--runDebounces[player] = false
+
+end
+
+--replicatedStorage.Run.OnServerEvent:Connect(run)
+local runEvent = replicatedStorage:WaitForChild("Run")
+runEvent.OnServerEvent:Connect(run)
