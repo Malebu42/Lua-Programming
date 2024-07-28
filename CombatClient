@@ -1,0 +1,18 @@
+local uis = game:GetService("UserInputService") --get User input
+
+uis.InputBegan:Connect(function(input, gameProcessedEvent)
+	if input.KeyCode == Enum.KeyCode.F and not gameProcessedEvent then
+		--register key usage
+		print("clicked F")
+		game.ReplicatedStorage:WaitForChild("Punch"):FireServer()
+		--runs "Punch"
+	end
+	
+	if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessedEvent then
+		--register key usage
+		print("clicked left Mouse Button")
+		game.ReplicatedStorage:WaitForChild("Punch"):FireServer()
+		--runs "Punch"
+	end
+	
+end)
