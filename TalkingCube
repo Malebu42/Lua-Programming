@@ -1,0 +1,14 @@
+local ChatService = game:GetService("Chat")
+
+local phrases = {
+	"Hello there!",
+	"Welcome to Malebu's test game!"
+}
+
+task.wait(1)
+
+local RandomPhrase = phrases[1]
+ChatService:Chat(workspace.Cube, RandomPhrase, Enum.ChatColor.White)
+task.wait(2)
+local RandomPhrase2 = phrases[2]
+ChatService:Chat(workspace.Cube, RandomPhrase2, Enum.ChatColor.White)
