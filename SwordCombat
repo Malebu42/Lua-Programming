@@ -1,0 +1,26 @@
+local rp = game:GetService("ReplicatedStorage")
+local Sword = rp:WaitForChild("Sword")
+
+local UIS = game:GetService("UserInputService")
+local isEquipped = false
+local debounce = false
+local cd = 1 
+
+UIS.InputBegan:Connect(function(input, isTyping)
+	if not isTyping then
+		if input.KeyCode == Enum.KeyCode.E then
+			--if input.KeyCode == Enum.KeyCode.E then
+			print("equipping")
+
+			if not debounce then
+				debounce = true
+				isEquipped = not isEquipped
+				Sword:FireServer(isEquipped)
+
+				wait(cd) -- Cooldown
+				debounce = false
+			end
+
+		end
+	end
+end)
