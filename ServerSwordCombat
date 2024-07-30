@@ -1,0 +1,78 @@
+local rp = game:GetService("ReplicatedStorage")
+local Sword = rp:WaitForChild("Sword")
+
+local cframes = {
+	["Right Arm"] = CFrame.new(0, -1, 0),
+	["RightHand"] = CFrame.new(0, 0, 0)
+}
+
+Sword.OnServerEvent:Connect(function(Player, isEquipped)
+	local Character = Player.Character
+	local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+
+	local RightHand = Character:FindFirstChild("RightHand")
+	local RightArm = Character:FindFirstChild("Right Arm")
+
+	if isEquipped then
+		-- equipping
+		local GreatSword = Character:FindFirstChild("GreatSword")
+		if GreatSword then
+			local BackWeld = GreatSword.PrimaryPart:FindFirstChild("BackWeld")
+			if BackWeld then
+				BackWeld:Destroy()
+								
+				-- correct arm
+				if Humanoid.RigType == Enum.HumanoidRigType.R15 then
+					GreatSword:SetPrimaryPartCFrame(Character:WaitForChild("RightHand").CFrame * cframes.RightHand)
+				elseif Humanoid.RigType == Enum.HumanoidRigType.R6 then
+					GreatSword:SetPrimaryPartCFrame(Character:WaitForChild("Right Arm").CFrame * cframes["Right Arm"] * CFrame.new(-1,1,-3.5)* CFrame.Angles(math.rad(180), math.rad(90), math.rad(90)))
+				end
+
+				local HandWeld = Instance.new("ManualWeld")
+				HandWeld.Name = "HandWeld"
+				HandWeld.Part0 = GreatSword.PrimaryPart
+
+				if Humanoid.RigType == Enum.HumanoidRigType.R15 then
+					HandWeld.Part1 = Character:WaitForChild("RightHand")
+				elseif Humanoid.RigType == Enum.HumanoidRigType.R6 then
+					HandWeld.Part1 = Character:WaitForChild("Right Arm")
+				end
+
+				-- Original C0 calculation
+				local originalC0 = HandWeld.Part0.CFrame:ToObjectSpace(HandWeld.Part1.CFrame)
+				-- Desired rotation for the sword
+				local desiredRotation = CFrame.Angles(math.rad(180), math.rad(180), math.rad(90)) -- Adjust these angles as needed
+				-- Combine the original C0 with the desired rotation
+				HandWeld.C0 = originalC0 * desiredRotation
+				-- Setting C1 to identity as it is a common practice, unless you need a specific offset
+				HandWeld.C1 = CFrame.new()
+
+				HandWeld.Parent = HandWeld.Part0
+				
+				--HandWeld.C0 = HandWeld.Part0.CFrame:ToObjectSpace(HandWeld.Part1.CFrame)
+				--HandWeld.Parent = HandWeld.Part0
+			end
+		end
+	elseif not isEquipped then
+		-- unequipping
+		local GreatSword = Character:FindFirstChild("GreatSword")
+		if GreatSword then
+			local HandWeld = GreatSword.PrimaryPart:FindFirstChild("HandWeld")
+			if HandWeld then
+				HandWeld:Destroy()
+				
+				local Case = Character:FindFirstChild("Case")
+				if Case then
+					GreatSword:SetPrimaryPartCFrame(Case.Case.CFrame *CFrame.new(0,-1,0)* CFrame.Angles(math.rad(0), math.rad(90), math.rad(180)))
+					
+					local weld2 = Instance.new("ManualWeld")
+					weld2.Name = "BackWeld"
+					weld2.Part0 = GreatSword.PrimaryPart
+					weld2.Part1 = Case.PrimaryPart
+					weld2.C0 = weld2.Part0.CFrame:ToObjectSpace((weld2.Part1.CFrame))
+					weld2.Parent = weld2.Part0
+				end				
+			end
+		end	
+	end
+end)
