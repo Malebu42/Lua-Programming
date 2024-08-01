@@ -1,0 +1,20 @@
+--services
+local Players = game:GetService("Players")
+local SG = game:GetService("StarterGui")
+
+--define variables
+local player = Players.LocalPlayer
+local playerGui = player.PlayerGui
+
+--wait for gui to load
+for i, guiObj in pairs(SG:GetDescendants()) do
+	while not playerGui:FindFirstChild(guiObj.Name, true) do
+		task.wait()
+	end
+end
+
+--modules
+local InventoryClient = require(script.InventoryClient)
+
+--start the function
+InventoryClient.Start()
