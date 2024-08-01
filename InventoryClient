@@ -1,0 +1,88 @@
+--services
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RS = game:GetService("ReplicatedStorage")
+local SG = game:GetService("StarterGui")
+
+--modules
+local Janitor = require(RS.Modules.Janitor)
+local signal = require((RS.Modules.Signal))
+
+--define variables
+local player = Players.LocalPlayer
+local playerGui = player.PlayerGui
+
+--gui refernces to inv-gui parts
+local gui = playerGui.InvAndHotbar
+local hotbarF = gui.Hotbar
+local invF = gui.Inventory; invF.Visible = false
+local invB = gui.InvButton
+
+local infoF = invF.Iteminfo; invF.Visible = false
+local itemNameT = infoF.ItemName
+local itemDescT = infoF.ItemDesc
+local equipB = infoF.Equip
+local dropB = infoF.Drop
+
+local hotbarSlots = {
+	hotbarF.Slot1,
+	hotbarF.Slot2,
+	hotbarF.Slot3,
+	hotbarF.Slot4,
+	hotbarF.Slot5,
+	hotbarF.Slot6,
+	hotbarF.Slot7,
+	hotbarF.Slot8,
+	hotbarF.Slot9,
+	hotbarF.Slot0,
+}
+
+--module
+local InventoryClient = {}
+InventoryClient.OpenPosition = invF.Position
+InventoryClient.ClosePosition = invF.Position + UDim2.fromScale(0,1)
+InventoryClient.OpenCloseDb = false
+InventoryClient.IsOpen = false
+
+--opening inv
+function InventoryClient.SetWindowOpen( toSet)
+	if InventoryClient.OpenCloseDb then return end
+	InventoryClient.OpenCloseDb = true
+	
+	if toSet == true then
+		invF.Position = InventoryClient.ClosePosition
+		invF.Visible = true
+		invF:TweenPosition(InventoryClient.OpenPosition, Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.5)
+		task.wait(0.5)
+		InventoryClient.IsOpen = true
+	else
+		invF:TweenPosition(InventoryClient.ClosePosition, Enum.EasingDirection.In, Enum.EasingStyle.Quart, 0.5)
+		task.wait(0.5)
+		invF.Visible = false
+		InventoryClient.IsOpen = false
+	end
+	
+	InventoryClient.OpenCloseDb = false
+end
+
+--reads userinput for open
+function InventoryClient.InputBegan(input, gameProcessedEvent)
+	if gameProcessedEvent then return end
+	
+	if input.KeyCode == Enum.KeyCode.Q then
+		InventoryClient.SetWindowOpen(not InventoryClient.IsOpen) --toogle on/off
+	end
+	
+end
+
+--initialising for opening inventory
+function InventoryClient.Start()
+	SG:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+	
+	UIS.InputBegan:Connect(InventoryClient.InputBegan)
+	invB.MouseButton1Click:Connect(function()
+		InventoryClient.SetWindowOpen(not InventoryClient.IsOpen)
+	end)
+end
+
+return InventoryClient
