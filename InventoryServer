@@ -1,0 +1,57 @@
+--services
+local Players = game:GetService("Players")
+local RS = game:GetService("ReplicatedStorage")
+local SG = game:GetService("StarterGui")
+
+--modules
+local Janitor = require(RS.Modules.Janitor)
+local signal = require((RS.Modules.Signal))
+
+local InventoryServer = {}
+InventoryServer.AllInventories = {} --all inventory data
+InventoryServer.MaxStacks = 20
+InventoryServer.MaxStackData = {
+	Weapon = 1;
+	Armor = 1;
+	Consumable = 5;
+	Resource = 10;
+}
+
+--character added
+--function InventoryServer.CharacterAdded(char)
+	--print("Character spawned")
+--end
+
+--Player added
+function InventoryServer.PlayerAdded(player)
+	--checking inventory
+	InventoryServer.AllInventories[player] = {
+		Inventory = {};
+		Hotbar = {};
+		Armor = {
+			Head = nil;
+			Chest = nil;
+			Boots = nil;
+			
+		};
+	}
+	
+	--print(Players)
+	
+	--character added
+	--if player.Character then
+		--task.spawn(InventoryServer.CharacterAdded, player.Character)
+	--end
+	--player.CharacterAdded:Connect(InventoryServer.CharacterAdded)
+end
+
+--initializing
+function InventoryServer.Start()
+	for i, player in pairs(Players:GetPlayers()) do
+		task.spawn(InventoryServer.PlayerAdded, player)
+	end
+	Players.PlayerAdded:Connect(InventoryServer.PlayerAdded)
+end
+
+--returning
+return InventoryServer
