@@ -3,10 +3,11 @@ local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("ReplicatedStorage")
 local SG = game:GetService("StarterGui")
+local HS = game:GetService("HttpService")
 
 --modules
 local Janitor = require(RS.Modules.Janitor)
-local signal = require((RS.Modules.Signal))
+local Signal = require((RS.Modules.Signal))
 
 --define variables
 local player = Players.LocalPlayer
@@ -23,6 +24,10 @@ local itemNameT = infoF.ItemName
 local itemDescT = infoF.ItemDesc
 local equipB = infoF.Equip
 local dropB = infoF.Drop
+
+--variable for the scrolling bar
+local itemsSF = invF.ItemsScroll
+local itemSample = itemsSF.Sample; itemSample.Visible = false
 
 local hotbarSlots = {
 	hotbarF.Slot1,
@@ -43,6 +48,50 @@ InventoryClient.OpenPosition = invF.Position
 InventoryClient.ClosePosition = invF.Position + UDim2.fromScale(0,1)
 InventoryClient.OpenCloseDb = false
 InventoryClient.IsOpen = false
+InventoryClient.invData = nil
+
+function InventoryClient.UpdateDisplay()
+	--clearing items
+	for i, itemF in pairs(itemsSF:GetChildren()) do
+		if itemF.ClassName == "ImageButton" and itemF ~= itemSample then
+			itemF:Destroy()
+		end
+	end
+	
+	--creating itemframes
+	for i, stackData in pairs(InventoryClient.invData.Inventory) do
+		
+		local itemF = itemSample:Clone()
+		itemF.Name = stackData.Name
+		itemF.Image = stackData.Image
+		itemF.Count.Text = stackData.Count .. "x"
+		itemF.Parent = itemSample.Parent
+		itemF.Visible = true
+		
+		-- display information
+		itemF.MouseButton1Click:Connect(function()
+			if InventoryClient.SelectedItemFrame == itemF then
+				-- Hide info if the same item frame is clicked again
+				infoF.Visible = false
+				InventoryClient.SelectedItemFrame = nil
+			else
+				-- Show info for the clicked item frame
+				itemNameT.Text = stackData.Name
+				itemDescT.Text = stackData.Description
+				infoF.Visible = true
+				InventoryClient.SelectedItemFrame = itemF
+			end
+		end)
+		
+	end
+	
+end
+
+
+function InventoryClient.UpdateInventoryData()
+	--gets JSON data
+	InventoryClient.invData = HS:JSONDecode(Signal.InvokeServer("Inventory:GetInventoryJSON"))
+end
 
 --opening inv
 function InventoryClient.SetWindowOpen( toSet)
@@ -75,9 +124,19 @@ function InventoryClient.InputBegan(input, gameProcessedEvent)
 	
 end
 
+
+
 --initialising for opening inventory
 function InventoryClient.Start()
 	SG:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+	
+	--updating Inventory
+	InventoryClient.UpdateInventoryData()
+	InventoryClient.UpdateDisplay()
+	Signal.ListenRemote("Inventory:ItemUpdated", function(newInvData)
+		InventoryClient.invData = HS:JSONDecode(newInvData)
+		InventoryClient.UpdateDisplay()
+	end)
 	
 	UIS.InputBegan:Connect(InventoryClient.InputBegan)
 	invB.MouseButton1Click:Connect(function()
