@@ -1,11 +1,13 @@
 --services
+local StarterPack  = game:GetService("StarterPack")
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local SG = game:GetService("StarterGui")
+local HS = game:GetService("HttpService")
 
 --modules
 local Janitor = require(RS.Modules.Janitor)
-local signal = require((RS.Modules.Signal))
+local Signal = require((RS.Modules.Signal))
 
 local InventoryServer = {}
 InventoryServer.AllInventories = {} --all inventory data
@@ -17,13 +19,99 @@ InventoryServer.MaxStackData = {
 	Resource = 10;
 }
 
---character added
---function InventoryServer.CharacterAdded(char)
-	--print("Character spawned")
+--check if player has a item already
+--function InventoryServer.FindItemStack(player, itemName)
+	--loops through players inventory stacks
+	--for i, stackData in pairs(InventoryServer.AllInventories[player].Inventory) do
+		--if stackData.Name == itemName then
+			--return stackData
+		--end
+	--end	
 --end
+
+
+--Additem
+function InventoryServer.RegisterItem(player, tool)
+	--check if a tool was added
+	if tool.ClassName ~= "Tool" then return end
+	
+	--getting inventory easily
+	local inv = InventoryServer.AllInventories[player]
+
+	--counts stacks
+	--local foundStack = InventoryServer.FindItemStack(player, tool.Name)
+	
+	--looping all stacks
+	local foundStack = nil
+
+	for i, stackData in pairs(inv.Inventory) do
+		if table.find(stackData.Items, tool) then
+			--check iftool is found
+			return --return: item already registered
+		--check if only same items are in a stack
+		elseif stackData.Name == tool.Name and #stackData.Items < InventoryServer.MaxStackData[stackData.ItemType] then
+			--add to stack
+			table.insert(stackData.Items, tool)		
+			foundStack = stackData
+			break
+		end
+	end
+	
+	if not foundStack then
+		if #inv.Inventory < InventoryServer.MaxStacks then --if stacks is less than max stacks
+			--create new stack
+			local stack = {
+				Name = tool.Name;
+				Description = tool.ToolTip;
+				Image = tool.TextureId;
+				ItemType = tool:GetAttribute("ItemType");
+				IsDroppable = tool:GetAttribute("IsDroppable");
+				Items = {tool};
+				StackId = inv.LastStackId
+			}
+			inv.LastStackId += 1
+			table.insert(inv.Inventory, stack)
+		else
+			error("Player inv is full")
+		end
+	end
+
+	Signal.FireClient(player, "Inventory:ItemsUpdated", InventoryServer.GetInventoryJSON(player))
+	
+end
+
+--removeitem
+function InventoryServer.UnregisterItem(player, tool)
+	if tool.ClassName ~= "Tool" then return end
+	
+	--searching for tool to remove
+	local inv = InventoryServer.AllInventories[player]
+	
+	for i, stackData in pairs(inv.Inventory) do
+		local found = table.find(stackData.Items, tool) --loops through
+		if found then
+			--remove tool
+			table.remove(stackData.Items, found)
+			--remove stack
+			if #stackData.Items == 0 then
+				table.remove(inv.Inventory, table.find(inv.Inventory, stackData))
+			end			
+		end
+	end
+	
+	Signal.FireClient(player, "Inventory:ItemsUpdated", InventoryServer.GetInventoryJSON(player))
+	--print(inv.Inventory)
+end
 
 --Player added
 function InventoryServer.PlayerAdded(player)
+	
+	--wait till starterpackitems are given !while loop!
+	for i, tool in pairs(StarterPack:GetChildren()) do
+		while not player.Backpack:FindFirstChild(tool.Name) do
+			task.wait()
+		end
+	end
 	--checking inventory
 	InventoryServer.AllInventories[player] = {
 		Inventory = {};
@@ -34,15 +122,68 @@ function InventoryServer.PlayerAdded(player)
 			Boots = nil;
 			
 		};
+		LastStackId = 0; --for counting stacks
 	}
+	--connection events
+	--loop to register all Items
+	for i, tool in pairs(player.Backpack:GetChildren()) do
+		InventoryServer.RegisterItem(player, tool)
+	end
+	--register items when entering backpack
+	player.Backpack.ChildAdded:Connect(function(child)
+		InventoryServer.RegisterItem(player, child)
+	end)
+	--umregister items when leaving backpack
+	player.Backpack.ChildRemoved:Connect(function(child)
+		InventoryServer.UnregisterItem(player, child)
+	end)
 	
-	--print(Players)
 	
 	--character added
-	--if player.Character then
-		--task.spawn(InventoryServer.CharacterAdded, player.Character)
-	--end
-	--player.CharacterAdded:Connect(InventoryServer.CharacterAdded)
+	local function CharAdded(char)
+		--connect events
+		print("Character added for player:", player.Name)
+		char.ChildAdded:Connect(function(child)
+			InventoryServer.RegisterItem(player, child)
+		end)
+		char.ChildRemoved:Connect(function(child)
+			InventoryServer.UnregisterItem(player, child)
+		end)
+		
+	end
+	--removes lag by properly disconnecting
+	if player.Character then
+		task.spawn(CharAdded, player.Character)
+	end
+	player.CharacterAdded:Connect(CharAdded)
+
+end
+
+--getting Inventory Data
+function InventoryServer.GetInventoryJSON(player)
+	--for saving player data better clientside
+	while not InventoryServer.AllInventories[player] do task.wait() end
+	local inv = InventoryServer.AllInventories[player]
+	
+	local adjustedInv = {
+		Inventory = {};
+		Hotbar = inv.Hotbar;
+		Armor = inv.Armor;
+		lastStackId = inv.LastStackId;
+	}	
+	for i, stackData in pairs(inv.Inventory) do
+		table.insert(adjustedInv.Inventory, {
+			Name = stackData.Name;
+			Description = stackData.Description;
+			Image = stackData.Image;
+			ItemType = stackData.ItemType;
+			IsDroppable = stackData.IsDroppable;
+			Count = #stackData.Items; --count instead of tool list
+			StackId = inv.LastStackId
+		})
+	end
+	
+	return HS:JSONEncode(adjustedInv)
 end
 
 --initializing
@@ -51,6 +192,9 @@ function InventoryServer.Start()
 		task.spawn(InventoryServer.PlayerAdded, player)
 	end
 	Players.PlayerAdded:Connect(InventoryServer.PlayerAdded)
+	
+	--listen to remote fires from the client
+	Signal.ListenRemote("Inventory:GetInventoryJSON", InventoryServer.GetInventoryJSON)
 end
 
 --returning
