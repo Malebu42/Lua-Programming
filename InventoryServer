@@ -19,6 +19,54 @@ InventoryServer.MaxStackData = {
 	Resource = 10;
 }
 
+--equipping items to Hotbar
+function InventoryServer.EquipToHotbar(player, equipTo, stackId)
+	
+	--getting Inventory
+	local inv = InventoryServer.AllInventories[player]
+	
+	--removing if exists already
+	InventoryServer.UnequipFromHotbar(player, stackId)
+	
+	--validating stack
+	local isValid = false
+	for i, stackData in pairs(inv.Inventory) do
+		if stackData.StackId == stackId then
+			isValid = true
+		end
+	end
+	if not isValid then return end
+
+	
+	--equipping
+	inv.Hotbar[equipTo] = stackId
+	--updating client
+	Signal.FireClient(player, "Inventory:ItemsUpdated", InventoryServer.GetInventoryJSON(player))
+	
+end
+
+--unequipping Item from Hotbar
+function InventoryServer.UnequipFromHotbar(player, stackId)
+	--getting Inventory
+	local inv = InventoryServer.AllInventories[player]
+
+	--removing if exists already
+	local found = false
+	for slotNum, equippedId in pairs(inv.Hotbar) do
+		if equippedId == stackId then
+			inv.Hotbar[slotNum] = nil
+			found = true
+		end	
+	end
+	
+	--updating client
+	if found then
+	Signal.FireClient(player, "Inventory:ItemsUpdated", InventoryServer.GetInventoryJSON(player))
+	end
+	
+end
+	
+
 --check if player has a item already
 --function InventoryServer.FindItemStack(player, itemName)
 	--loops through players inventory stacks
@@ -28,7 +76,6 @@ InventoryServer.MaxStackData = {
 		--end
 	--end	
 --end
-
 
 --Additem
 function InventoryServer.RegisterItem(player, tool)
@@ -57,6 +104,7 @@ function InventoryServer.RegisterItem(player, tool)
 		end
 	end
 	
+	--check if stack found
 	if not foundStack then
 		if #inv.Inventory < InventoryServer.MaxStacks then --if stacks is less than max stacks
 			--create new stack
@@ -71,6 +119,15 @@ function InventoryServer.RegisterItem(player, tool)
 			}
 			inv.LastStackId += 1
 			table.insert(inv.Inventory, stack)
+			
+			--equip to First open slot
+			for slotNum = 1,10 do
+				if inv.Hotbar[slotNum] == nil then
+					InventoryServer.EquipToHotbar(player, slotNum, stack.StackId)
+					break
+				end
+			end
+			
 		else
 			error("Player inv is full")
 		end
@@ -95,6 +152,7 @@ function InventoryServer.UnregisterItem(player, tool)
 			--remove stack
 			if #stackData.Items == 0 then
 				table.remove(inv.Inventory, table.find(inv.Inventory, stackData))
+				InventoryServer.UnequipFromHotbar(player, stackData.stackId)
 			end			
 		end
 	end
@@ -165,6 +223,7 @@ function InventoryServer.GetInventoryJSON(player)
 	while not InventoryServer.AllInventories[player] do task.wait() end
 	local inv = InventoryServer.AllInventories[player]
 	
+	--adjusting inventory
 	local adjustedInv = {
 		Inventory = {};
 		Hotbar = inv.Hotbar;
@@ -179,7 +238,7 @@ function InventoryServer.GetInventoryJSON(player)
 			ItemType = stackData.ItemType;
 			IsDroppable = stackData.IsDroppable;
 			Count = #stackData.Items; --count instead of tool list
-			StackId = inv.LastStackId
+			StackId = stackData.StackId
 		})
 	end
 	
@@ -195,6 +254,9 @@ function InventoryServer.Start()
 	
 	--listen to remote fires from the client
 	Signal.ListenRemote("Inventory:GetInventoryJSON", InventoryServer.GetInventoryJSON)
+	Signal.ListenRemote("Inventory:EquipToHotbar", InventoryServer.EquipToHotbar)
+	Signal.ListenRemote("Inventory:UnequipToHotbar", InventoryServer.UnequipFromHotbar)
+		
 end
 
 --returning
