@@ -21,13 +21,13 @@ InventoryServer.MaxStackData = {
 
 --equipping items to Hotbar
 function InventoryServer.EquipToHotbar(player, equipTo, stackId)
-	
+
 	--getting Inventory
 	local inv = InventoryServer.AllInventories[player]
-	
+
 	--removing if exists already
 	InventoryServer.UnequipFromHotbar(player, stackId)
-	
+
 	--validating stack
 	local isValid = false
 	for i, stackData in pairs(inv.Inventory) do
@@ -37,12 +37,12 @@ function InventoryServer.EquipToHotbar(player, equipTo, stackId)
 	end
 	if not isValid then return end
 
-	
+
 	--equipping
-	inv.Hotbar[equipTo] = stackId
+	inv.Hotbar["Slot" .. equipTo] = stackId
 	--updating client
-	Signal.FireClient(player, "Inventory:ItemsUpdated", InventoryServer.GetInventoryJSON(player))
-	
+	Signal.FireClient(player, "Inventory:ItemsUpdated", InventoryServer.GetInventoryData(player))
+
 end
 
 --unequipping Item from Hotbar
@@ -52,42 +52,42 @@ function InventoryServer.UnequipFromHotbar(player, stackId)
 
 	--removing if exists already
 	local found = false
-	for slotNum, equippedId in pairs(inv.Hotbar) do
+	for slotKey, equippedId in pairs(inv.Hotbar) do
 		if equippedId == stackId then
-			inv.Hotbar[slotNum] = nil
+			inv.Hotbar[slotKey] = nil -- remove "Slot" .. here for it to work
 			found = true
 		end	
 	end
-	
+
 	--updating client
 	if found then
-	Signal.FireClient(player, "Inventory:ItemsUpdated", InventoryServer.GetInventoryJSON(player))
+		Signal.FireClient(player, "Inventory:ItemsUpdated", InventoryServer.GetInventoryData(player))
 	end
-	
+
 end
-	
+
 
 --check if player has a item already
 --function InventoryServer.FindItemStack(player, itemName)
-	--loops through players inventory stacks
-	--for i, stackData in pairs(InventoryServer.AllInventories[player].Inventory) do
-		--if stackData.Name == itemName then
-			--return stackData
-		--end
-	--end	
+--loops through players inventory stacks
+--for i, stackData in pairs(InventoryServer.AllInventories[player].Inventory) do
+--if stackData.Name == itemName then
+--return stackData
+--end
+--end	
 --end
 
 --Additem
 function InventoryServer.RegisterItem(player, tool)
 	--check if a tool was added
 	if tool.ClassName ~= "Tool" then return end
-	
+
 	--getting inventory easily
 	local inv = InventoryServer.AllInventories[player]
 
 	--counts stacks
 	--local foundStack = InventoryServer.FindItemStack(player, tool.Name)
-	
+
 	--looping all stacks
 	local foundStack = nil
 
@@ -95,7 +95,7 @@ function InventoryServer.RegisterItem(player, tool)
 		if table.find(stackData.Items, tool) then
 			--check iftool is found
 			return --return: item already registered
-		--check if only same items are in a stack
+				--check if only same items are in a stack
 		elseif stackData.Name == tool.Name and #stackData.Items < InventoryServer.MaxStackData[stackData.ItemType] then
 			--add to stack
 			table.insert(stackData.Items, tool)		
@@ -103,7 +103,7 @@ function InventoryServer.RegisterItem(player, tool)
 			break
 		end
 	end
-	
+
 	--check if stack found
 	if not foundStack then
 		if #inv.Inventory < InventoryServer.MaxStacks then --if stacks is less than max stacks
@@ -119,31 +119,31 @@ function InventoryServer.RegisterItem(player, tool)
 			}
 			inv.LastStackId += 1
 			table.insert(inv.Inventory, stack)
-			
+
 			--equip to First open slot
 			for slotNum = 1,10 do
-				if inv.Hotbar[slotNum] == nil then
+				if inv.Hotbar["Slot" .. slotNum] == nil then
 					InventoryServer.EquipToHotbar(player, slotNum, stack.StackId)
 					break
 				end
 			end
-			
+
 		else
 			error("Player inv is full")
 		end
 	end
 
-	Signal.FireClient(player, "Inventory:ItemsUpdated", InventoryServer.GetInventoryJSON(player))
-	
+	Signal.FireClient(player, "Inventory:ItemsUpdated", InventoryServer.GetInventoryData(player))
+
 end
 
 --removeitem
 function InventoryServer.UnregisterItem(player, tool)
 	if tool.ClassName ~= "Tool" then return end
-	
+
 	--searching for tool to remove
 	local inv = InventoryServer.AllInventories[player]
-	
+
 	for i, stackData in pairs(inv.Inventory) do
 		local found = table.find(stackData.Items, tool) --loops through
 		if found then
@@ -156,14 +156,14 @@ function InventoryServer.UnregisterItem(player, tool)
 			end			
 		end
 	end
-	
-	Signal.FireClient(player, "Inventory:ItemsUpdated", InventoryServer.GetInventoryJSON(player))
+
+	Signal.FireClient(player, "Inventory:ItemsUpdated", InventoryServer.GetInventoryData(player))
 	--print(inv.Inventory)
 end
 
 --Player added
 function InventoryServer.PlayerAdded(player)
-	
+
 	--wait till starterpackitems are given !while loop!
 	for i, tool in pairs(StarterPack:GetChildren()) do
 		while not player.Backpack:FindFirstChild(tool.Name) do
@@ -178,7 +178,7 @@ function InventoryServer.PlayerAdded(player)
 			Head = nil;
 			Chest = nil;
 			Boots = nil;
-			
+
 		};
 		LastStackId = 0; --for counting stacks
 	}
@@ -195,8 +195,8 @@ function InventoryServer.PlayerAdded(player)
 	player.Backpack.ChildRemoved:Connect(function(child)
 		InventoryServer.UnregisterItem(player, child)
 	end)
-	
-	
+
+
 	--character added
 	local function CharAdded(char)
 		--connect events
@@ -207,7 +207,7 @@ function InventoryServer.PlayerAdded(player)
 		char.ChildRemoved:Connect(function(child)
 			InventoryServer.UnregisterItem(player, child)
 		end)
-		
+
 	end
 	--removes lag by properly disconnecting
 	if player.Character then
@@ -218,11 +218,11 @@ function InventoryServer.PlayerAdded(player)
 end
 
 --getting Inventory Data
-function InventoryServer.GetInventoryJSON(player)
+function InventoryServer.GetInventoryData(player)
 	--for saving player data better clientside
 	while not InventoryServer.AllInventories[player] do task.wait() end
 	local inv = InventoryServer.AllInventories[player]
-	
+
 	--adjusting inventory
 	local adjustedInv = {
 		Inventory = {};
@@ -241,8 +241,9 @@ function InventoryServer.GetInventoryJSON(player)
 			StackId = stackData.StackId
 		})
 	end
-	
-	return HS:JSONEncode(adjustedInv)
+
+	--returning
+	return adjustedInv
 end
 
 --initializing
@@ -251,12 +252,12 @@ function InventoryServer.Start()
 		task.spawn(InventoryServer.PlayerAdded, player)
 	end
 	Players.PlayerAdded:Connect(InventoryServer.PlayerAdded)
-	
+
 	--listen to remote fires from the client
-	Signal.ListenRemote("Inventory:GetInventoryJSON", InventoryServer.GetInventoryJSON)
+	Signal.ListenRemote("Inventory:GetInventoryData", InventoryServer.GetInventoryData)
 	Signal.ListenRemote("Inventory:EquipToHotbar", InventoryServer.EquipToHotbar)
-	Signal.ListenRemote("Inventory:UnequipToHotbar", InventoryServer.UnequipFromHotbar)
-		
+	Signal.ListenRemote("Inventory:UnequipFromHotbar", InventoryServer.UnequipFromHotbar)
+
 end
 
 --returning
