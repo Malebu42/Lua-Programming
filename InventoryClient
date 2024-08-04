@@ -80,11 +80,13 @@ function InventoryClient.setEquipButton(toSet)
 end
 
 function InventoryClient.SelectItem(stackData)
-	InventoryClient.SelectedStackId = if stackData then stackData.StackId else nil
 	
+	--setting selected
+	InventoryClient.SelectedStackId = if stackData then stackData.StackId else nil
+
 	--finding itemF
 	local itemF = if stackData then itemsSF:FindFirstChild("Stack" .. stackData.StackId) else nil
-	
+
 	--setting frame colors
 	for i, otherItemF in pairs(itemsSF:GetChildren()) do
 		if otherItemF.ClassName == "ImageButton" and otherItemF ~= itemSample then
@@ -95,13 +97,13 @@ function InventoryClient.SelectItem(stackData)
 			end
 		end
 	end
-	
+
 	--updating information  (infoframe)
 	if stackData then
 		infoF.Visible = true
 		itemNameT.Text = stackData.Name
 		itemDescT.Text = stackData.Description
-		
+
 		local isEquipped = false
 		for slotNum, stackId in pairs(InventoryClient.InvData.Hotbar) do
 			if stackId == stackData.StackId then
@@ -109,13 +111,13 @@ function InventoryClient.SelectItem(stackData)
 				isEquipped = true
 			end
 		end
-		
+
 		InventoryClient.setEquipButton(not isEquipped)
 	else
 		infoF.Visible = false
 		InventoryClient.setEquipButton(true)	
 	end
-	
+
 end
 
 --finding stack data from Id (easier access)
@@ -127,7 +129,7 @@ function InventoryClient.FindStackDataFromId(stackId)
 	end
 end
 
-
+--updating iventory Display
 function InventoryClient.UpdateDisplay()
 	while InventoryClient.UpdatingDb do task.wait() end
 	InventoryClient.UpdatingDb = true
@@ -137,39 +139,39 @@ function InventoryClient.UpdateDisplay()
 			itemF:Destroy()
 		end
 	end
-		
+
 	--creating itemframes
 	for i, stackData in pairs(InventoryClient.InvData.Inventory) do
-		
+
 		local itemF = itemSample:Clone()
 		itemF.Name = "Stack-" .. stackData.StackId
 		itemF.Image = stackData.Image
 		itemF.Count.Text = stackData.Count .. "x"
 		itemF.Parent = itemSample.Parent
 		itemF.Visible = true
-		
+
 		if stackData.Count == 1 then
 			itemF.Count.Visible = false
 		end
-		
+
 		--selecting item
 		itemF.MouseButton1Click:Connect(function()
 			InventoryClient.SelectItem(stackData, itemF)
 		end)
-				
+
 	end
-	
+
 	--updating hotbar
 	for slotNum = 1,10 do
 		local slotF = hotbarSlots[slotNum]
-		local stackId = InventoryClient.InvData.Hotbar[slotNum]
+		local stackId = InventoryClient.InvData.Hotbar["Slot" .. slotNum]
 		if stackId == nil then
 			slotF.Count.Visible = false
 			slotF.Image = ""
 		else
 			--finding stack data
 			local foundStack = InventoryClient.FindStackDataFromId(stackId)
-			
+
 			--updating information
 			if foundStack then
 				slotF.Count.Text = foundStack.Count .. "x"
@@ -184,65 +186,66 @@ function InventoryClient.UpdateDisplay()
 				slotF.Count.Visible = false
 				slotF.Image = ""
 			end
-			
+
 		end
-				
+
 	end
-	
+
 	--reselecting items
 	local equippedData = InventoryClient.FindStackDataFromId(InventoryClient.SelectedStackId)
-	InventoryClient.SelectItem(equippedData)
-	InventoryClient.UpdatingDb = false
-	
-	
-	--local slotF = nil
+	local slotF = nil
 	--if InventoryClient.SelectedStackId then
 		--for slotNum, stackId in pairs(InventoryClient.InvData.Hotbar) do
 			--if stackId == InventoryClient.SelectedStackId then
-			--	slotF = hotbarSlots[slotNum]
-				--break
+				--print(slotNum, hotbarSlots[slotNum])
+				--slotF = hotbarSlots[slotNum]
 			--end
 		--end
 	--end	
-	
-	
-end
+	InventoryClient.SelectItem(equippedData)
+	InventoryClient.UpdatingDb = false
 
+end
 
 function InventoryClient.UpdateInventoryData()
 	--gets JSON data
-	InventoryClient.InvData = HS:JSONDecode(Signal.InvokeServer("Inventory:GetInventoryJSON"))
+	InventoryClient.InvData = Signal.InvokeServer("Inventory:GetInventoryData")
 end
 
 --equip Button
 function InventoryClient.EquipButtonPressed()
 	--finding stack data
 	local stackData = InventoryClient.FindStackDataFromId(InventoryClient.SelectedStackId)
+
+	if not stackData then
+		warn("No stack data found for the selected item.")
+		return
+	end
 	
 	if equipB.Text == "Equip" and InventoryClient.SelectedStackId ~= nil then
-		
+
 		--find stack data
 		--local stackData = InventoryClient.FindStackDataFromId(InventoryClient.SelectedStackId)
-		
+
 		--instructions
 		local tempJanitor = Janitor.new()
 		instructT.Visible = true tempJanitor:GiveChore(function() instructT.Visible = false end)
 		equipB.Text = "<--->" tempJanitor:GiveChore(function() equipB.Text = "Equip" end)
-		
+
 		--checking item type
 		if stackData.ItemType == "Armor" then
 			error("later")
 		else
 			--prompting selection
-			
+
 			local chosenSlot = nil
 			local slotNum = nil
-			
+
 			--Keyboard inputs
 			tempJanitor:GiveChore(UIS.InputBegan:Connect(function(input, gameProcessedEvent)
 				if gameProcessedEvent then return end
 				if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-				
+
 				--selecting slot
 				for key, slotF in pairs(KeysToSlots) do
 					if input.KeyCode == key then
@@ -252,14 +255,14 @@ function InventoryClient.EquipButtonPressed()
 						return
 					end
 				end	
-				
+
 				--canceling
 				instructT.Text = "Error: not a valid key"; tempJanitor:GiveChore(function() instructT.Text = InventoryClient.EquipInstructText end)
 				task.wait(2)
 				tempJanitor:Clean()
-				
+
 			end))
-			
+
 			--button for mobile
 			for i, slotF in pairs(hotbarSlots) do
 				tempJanitor:GiveChore(slotF.MouseButton1Click:Connect(function()
@@ -269,10 +272,10 @@ function InventoryClient.EquipButtonPressed()
 					tempJanitor:Clean()				
 				end))
 			end
-			
+
 			--wait for selection
 			while not chosenSlot do task.wait() end
-			
+
 			if not slotNum then
 				for i, slotF in pairs(hotbarSlots) do
 					if slotF == chosenSlot then
@@ -281,15 +284,20 @@ function InventoryClient.EquipButtonPressed()
 					end
 				end
 			end
-			
+
 			--equipping
 			Signal.FireServer("Inventory:EquipToHotbar", slotNum, stackData.StackId)
-			
+
 		end
-		
-	
+
+
 	elseif equipB.Text == "Unequip" then
-		Signal.FireServer("Inventory:UnequipToHotbar", stackData.StackId)
+		print("Unequipping item with StackId:", stackData.StackId)
+		Signal.FireServer("Inventory:UnequipFromHotbar", stackData.StackId)
+		
+		--updating
+		InventoryClient.UpdateInventoryData()
+		InventoryClient.UpdateDisplay()
 	end
 end
 
@@ -297,7 +305,7 @@ end
 function InventoryClient.SetWindowOpen( toSet)
 	if InventoryClient.OpenCloseDb then return end
 	InventoryClient.OpenCloseDb = true
-	
+
 	if toSet == true then
 		invF.Position = InventoryClient.ClosePosition
 		invF.Visible = true
@@ -310,43 +318,41 @@ function InventoryClient.SetWindowOpen( toSet)
 		invF.Visible = false
 		InventoryClient.IsOpen = false
 	end
-	
+
 	InventoryClient.OpenCloseDb = false
 end
 
 --reads userinput for open
 function InventoryClient.InputBegan(input, gameProcessedEvent)
 	if gameProcessedEvent then return end
-	
+
 	if input.KeyCode == Enum.KeyCode.Q then
 		InventoryClient.SetWindowOpen(not InventoryClient.IsOpen) --toogle on/off
 	end
-	
+
 end
-
-
 
 --initialising for opening inventory
 function InventoryClient.Start()
 	SG:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
-	
+
 	--updating Inventory
 	InventoryClient.UpdateInventoryData()
 	InventoryClient.UpdateDisplay()
-	
+
 	Signal.ListenRemote("Inventory:ItemsUpdated", function(newInvData)
-		InventoryClient.InvData = HS:JSONDecode(newInvData)
+		InventoryClient.InvData = newInvData
 		InventoryClient.UpdateDisplay()
 	end)
-	
+
 	UIS.InputBegan:Connect(InventoryClient.InputBegan)
 	invB.MouseButton1Click:Connect(function()
 		InventoryClient.SetWindowOpen(not InventoryClient.IsOpen)
 	end)
-	
+
 	--connection Equip
 	equipB.MouseButton1Click:Connect(InventoryClient.EquipButtonPressed)
-	
+
 end
 
 return InventoryClient
