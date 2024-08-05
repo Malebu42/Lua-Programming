@@ -19,6 +19,53 @@ InventoryServer.MaxStackData = {
 	Resource = 10;
 }
 
+--finding stack Data from id
+function InventoryServer.FindStackDataFromId(player, stackId)
+	for i ,stackData in pairs(InventoryServer.AllInventories[player].Inventory) do
+		if stackData.StackId == stackId then
+			return stackData
+		end
+	end
+end
+
+--equip Item
+function InventoryServer.EquipItem(player, slotNum)
+	--finding correspodning stack
+	local inv = InventoryServer.AllInventories[player]
+	local stackData = nil
+	
+	for slotKey, stackId in pairs(inv.Hotbar) do
+		--print(slotKey)
+		--print(slotNum)
+		if slotKey == "Slot" .. slotNum then
+			stackData = InventoryServer.FindStackDataFromId(player, stackId)
+			break
+		end
+	end
+	
+	--unequipping
+	InventoryServer.UnequipItems(player)
+	if stackData then
+		
+		--equipping first tool
+		local tool = stackData.Items[1]
+		if not player.Character then return end
+		tool.Parent = player.Character
+		
+		--updating client
+		Signal.FireClient(player, "Inventory:ItemsUpdated", InventoryServer.GetInventoryData(player))
+		
+	end
+	
+end
+
+--unequipping
+function InventoryServer.UnequipItems(player)
+	local char = player.Character; if not char then return end
+	local hum = char:FindFirstChild("Humanoid"); if not hum then return end
+	hum:UnequipTools()
+end
+
 --equipping items to Hotbar
 function InventoryServer.EquipToHotbar(player, equipTo, stackId)
 
@@ -65,17 +112,6 @@ function InventoryServer.UnequipFromHotbar(player, stackId)
 	end
 
 end
-
-
---check if player has a item already
---function InventoryServer.FindItemStack(player, itemName)
---loops through players inventory stacks
---for i, stackData in pairs(InventoryServer.AllInventories[player].Inventory) do
---if stackData.Name == itemName then
---return stackData
---end
---end	
---end
 
 --Additem
 function InventoryServer.RegisterItem(player, tool)
@@ -140,6 +176,7 @@ end
 --removeitem
 function InventoryServer.UnregisterItem(player, tool)
 	if tool.ClassName ~= "Tool" then return end
+	if tool.Parent == player.Backpack or (player.Character and tool.Parent == player.Character) then return end
 
 	--searching for tool to remove
 	local inv = InventoryServer.AllInventories[player]
@@ -169,6 +206,7 @@ function InventoryServer.PlayerAdded(player)
 		while not player.Backpack:FindFirstChild(tool.Name) do
 			task.wait()
 		end
+		
 	end
 	--checking inventory
 	InventoryServer.AllInventories[player] = {
@@ -237,6 +275,7 @@ function InventoryServer.GetInventoryData(player)
 			Image = stackData.Image;
 			ItemType = stackData.ItemType;
 			IsDroppable = stackData.IsDroppable;
+			Items = stackData.Items;
 			Count = #stackData.Items; --count instead of tool list
 			StackId = stackData.StackId
 		})
@@ -257,6 +296,8 @@ function InventoryServer.Start()
 	Signal.ListenRemote("Inventory:GetInventoryData", InventoryServer.GetInventoryData)
 	Signal.ListenRemote("Inventory:EquipToHotbar", InventoryServer.EquipToHotbar)
 	Signal.ListenRemote("Inventory:UnequipFromHotbar", InventoryServer.UnequipFromHotbar)
+	Signal.ListenRemote("Inventory:EquipItem", InventoryServer.EquipItem)
+	Signal.ListenRemote("Inventory:UnequipItems", InventoryServer.UnequipItems)
 
 end
 
