@@ -65,6 +65,7 @@ InventoryClient.OpenCloseDb = false
 InventoryClient.IsOpen = false
 InventoryClient.InvData = nil
 InventoryClient.SelectedStackId = nil
+InventoryClient.EquippedSlotNum = nil
 InventoryClient.EquipInstructText = instructT.Text
 InventoryClient.UpdatingDb = false
 
@@ -118,6 +119,15 @@ function InventoryClient.SelectItem(stackData)
 		InventoryClient.setEquipButton(true)	
 	end
 
+end
+
+--equipping item
+function InventoryClient.ToggleEquip(slotNum)
+	if InventoryClient.EquippedSlotNum == slotNum then
+		Signal.FireServer("Inventory:UnequipItems")
+	else
+		Signal.FireServer("Inventory:EquipItem", slotNum)
+	end
 end
 
 --finding stack data from Id (easier access)
@@ -194,23 +204,61 @@ function InventoryClient.UpdateDisplay()
 	--reselecting items
 	local equippedData = InventoryClient.FindStackDataFromId(InventoryClient.SelectedStackId)
 	local slotF = nil
-	--if InventoryClient.SelectedStackId then
-		--for slotNum, stackId in pairs(InventoryClient.InvData.Hotbar) do
-			--if stackId == InventoryClient.SelectedStackId then
-				--print(slotNum, hotbarSlots[slotNum])
-				--slotF = hotbarSlots[slotNum]
-			--end
-		--end
-	--end	
+		
 	InventoryClient.SelectItem(equippedData)
 	InventoryClient.UpdatingDb = false
 
+end
+
+--update equipped item
+function InventoryClient.UpdateEquippedItem()
+	--character variables
+	local char = player.Character; if not char then return end
+	local tool = char:FindFirstChildOfClass("Tool")
+	
+	--if tool
+	if tool then
+		--finding slot
+		local slotNum = nil
+		for i = 1,10 do
+			local stackId = InventoryClient.InvData.Hotbar["Slot" .. i]
+			local stackData = InventoryClient.FindStackDataFromId(stackId)
+			if stackData and table.find(stackData.Items, tool) then --stackData.Name == tool.Name?
+				slotNum = i
+				break
+			end
+		end
+		
+		--updating
+		if slotNum then
+			InventoryClient.EquippedSlotNum = slotNum
+			local slotF = hotbarSlots[slotNum]
+			for i, otherSlotF in pairs(hotbarSlots) do
+				if otherSlotF == slotF then
+					otherSlotF.BackgroundColor3 = otherSlotF:GetAttribute("SelectedColor")
+				else
+					otherSlotF.BackgroundColor3 = otherSlotF:GetAttribute("NormalColor")
+				end
+			end
+		else
+			InventoryClient.EquippedSlotNum = nil
+			Signal.FireServer("Inventory:UnequipItems") --prevents bugs
+		end
+		
+	else
+		for i, slotF in pairs(hotbarSlots) do
+			slotF.BackgroundColor3 = slotF:GetAttribute("NormalColor")
+		end
+		InventoryClient.EquippedSlotNum = nil
+		
+	end
 end
 
 function InventoryClient.UpdateInventoryData()
 	--gets JSON data
 	InventoryClient.InvData = Signal.InvokeServer("Inventory:GetInventoryData")
 end
+
 
 --equip Button
 function InventoryClient.EquipButtonPressed()
@@ -329,6 +377,13 @@ function InventoryClient.InputBegan(input, gameProcessedEvent)
 	if input.KeyCode == Enum.KeyCode.Q then
 		InventoryClient.SetWindowOpen(not InventoryClient.IsOpen) --toogle on/off
 	end
+	
+	--equipping slots
+	for key, slotF in pairs(KeysToSlots) do
+		if input.KeyCode == key then
+			InventoryClient.ToggleEquip(table.find(hotbarSlots, slotF))
+		end
+	end
 
 end
 
@@ -339,10 +394,12 @@ function InventoryClient.Start()
 	--updating Inventory
 	InventoryClient.UpdateInventoryData()
 	InventoryClient.UpdateDisplay()
+	InventoryClient.UpdateEquippedItem()
 
 	Signal.ListenRemote("Inventory:ItemsUpdated", function(newInvData)
 		InventoryClient.InvData = newInvData
 		InventoryClient.UpdateDisplay()
+		InventoryClient.UpdateEquippedItem()
 	end)
 
 	UIS.InputBegan:Connect(InventoryClient.InputBegan)
@@ -352,6 +409,13 @@ function InventoryClient.Start()
 
 	--connection Equip
 	equipB.MouseButton1Click:Connect(InventoryClient.EquipButtonPressed)
+	
+	--connecting slot button equip
+	for i, slotF in pairs(hotbarSlots) do
+		slotF.MouseButton1Click:Connect(function()
+			InventoryClient.ToggleEquip(i)
+		end)
+	end
 
 end
 
