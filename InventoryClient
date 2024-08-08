@@ -139,6 +139,16 @@ function InventoryClient.FindStackDataFromId(stackId)
 	end
 end
 
+--checking if Equipped
+function InventoryClient.CheckItemEquipped(stackData)
+	for slotKey, stackId in pairs(InventoryClient.InvData.Hotbar) do
+		if stackId == stackData.StackId then
+			return true
+		end
+	end
+	return false
+end
+
 --updating iventory Display
 function InventoryClient.UpdateDisplay()
 	while InventoryClient.UpdatingDb do task.wait() end
@@ -157,6 +167,7 @@ function InventoryClient.UpdateDisplay()
 		itemF.Name = "Stack-" .. stackData.StackId
 		itemF.Image = stackData.Image
 		itemF.Count.Text = stackData.Count .. "x"
+		itemF.Equipped.Visible = InventoryClient.CheckItemEquipped(stackData)
 		itemF.Parent = itemSample.Parent
 		itemF.Visible = true
 
@@ -170,6 +181,10 @@ function InventoryClient.UpdateDisplay()
 		end)
 
 	end
+	
+	--update canvas
+	itemsSF.CanvasSize = UDim2.fromOffset(0, itemsSF.UIGridLayout.AbsoluteContentSize.X + 20)
+	
 
 	--updating hotbar
 	for slotNum = 1,10 do
@@ -282,6 +297,7 @@ function InventoryClient.EquipButtonPressed()
 
 		--checking item type
 		if stackData.ItemType == "Armor" then
+			tempJanitor:Clean()
 			error("later")
 		else
 			--prompting selection
