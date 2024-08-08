@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local SG = game:GetService("StarterGui")
 local HS = game:GetService("HttpService")
+local CS = game:GetService("CollectionService") --organize objects with text
 
 --modules
 local Janitor = require(RS.Modules.Janitor)
@@ -333,7 +334,47 @@ function InventoryServer.GetInventoryData(player)
 	return adjustedInv
 end
 
+--managing dropped Items
+function InventoryServer.StartDroppedItemsLoop()
+	--looping correctly
+	task.spawn(function()
+		while true do
+			task.wait()
+			
+			--looping all items
+			for i, tool in pairs(workspace:GetDescendants()) do
+				if tool.ClassName == "Tool" then
 
+					--checking if inside Character
+					local handle = tool:FindFirstChild("Handle")
+					local humanoid = tool.Parent:FindFirstChild("Humanoid")
+					local prompt = tool:FindFirstChild("DroppeditemsPrompt", true)
+					--searches the tool AND all its children because its set to true
+
+					if humanoid then
+						if prompt then
+							--cleanup
+							prompt:Destroy()
+						end
+
+					elseif not prompt and handle then		
+						--adding proximity prompt
+						local prompt = script.DroppeditemsPrompt:Clone()
+						prompt.ObjectText = tool.Name
+						prompt.Parent = handle
+
+						--connecting triggered event
+						prompt.Triggered:Connect(function(player)
+							--gives player the item
+							local backpack = player:FindFirstChild("Backpack"); if not backpack then return end
+							tool.Parent = backpack
+						end)
+					end
+				end
+			end
+		end
+	end)		
+end
 
 --initializing
 function InventoryServer.Start()
@@ -348,6 +389,9 @@ function InventoryServer.Start()
 	Signal.ListenRemote("Inventory:UnequipFromHotbar", InventoryServer.UnequipFromHotbar)
 	Signal.ListenRemote("Inventory:EquipItem", InventoryServer.EquipItem)
 	Signal.ListenRemote("Inventory:UnequipItems", InventoryServer.UnequipItems)
+	
+	--start dropped items loop
+	InventoryServer.StartDroppedItemsLoop()
 
 end
 
