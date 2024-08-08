@@ -78,7 +78,7 @@ function InventoryServer.EquipToHotbar(player, equipTo, stackId)
 	--validating stack
 	local isValid = false
 	for i, stackData in pairs(inv.Inventory) do
-		if stackData.StackId == stackId then
+		if stackData.StackId == stackId and stackData.ItemType ~= "Armor" then
 			isValid = true
 		end
 	end
@@ -122,8 +122,7 @@ function InventoryServer.RegisterItem(player, tool)
 	local inv = InventoryServer.AllInventories[player]
 
 	--counts stacks
-	--local foundStack = InventoryServer.FindItemStack(player, tool.Name)
-
+	
 	--looping all stacks
 	local foundStack = nil
 
@@ -237,6 +236,39 @@ function InventoryServer.PlayerAdded(player)
 
 	--character added
 	local function CharAdded(char)
+		--on char death
+		local hum = char:WaitForChild("Humanoid")
+		hum.Died:Connect(function()
+			print("Character died for player:", player.Name)
+			--reparenting
+			local allItems = player.Backpack:GetChildren()
+			for i, item in pairs(allItems) do
+				print("Capturing item:", item.Name)
+				item.Parent = script
+			end
+			
+			--adding back
+			player.CharacterAdded:Wait()
+			-- Wait a short delay to handle any potential replication delays
+			--wait(0.1)
+			local backpack = player:WaitForChild("Backpack")
+			
+			for i, item in pairs(script:GetChildren()) do --allItems
+				print("Re-adding item:", item.Name)
+				item.Parent = backpack
+			end
+			
+			--update inv
+			InventoryServer.ResetHotbar(player) 
+			InventoryServer.RegisterAllItems(player)
+			
+			-- Debug print to check the items in the backpack
+			for _, item in ipairs(player.Backpack:GetChildren()) do
+				print("Current item in backpack:", item.Name)
+			end
+			
+		end)
+				
 		--connect events
 		print("Character added for player:", player.Name)
 		char.ChildAdded:Connect(function(child)
@@ -245,7 +277,7 @@ function InventoryServer.PlayerAdded(player)
 		char.ChildRemoved:Connect(function(child)
 			InventoryServer.UnregisterItem(player, child)
 		end)
-
+		
 	end
 	--removes lag by properly disconnecting
 	if player.Character then
@@ -253,6 +285,22 @@ function InventoryServer.PlayerAdded(player)
 	end
 	player.CharacterAdded:Connect(CharAdded)
 
+end
+
+--register allitems (neu)
+function InventoryServer.RegisterAllItems(player)
+	local backpack = player:WaitForChild("Backpack")
+	for _, item in pairs(backpack:GetChildren()) do
+		if item.ClassName == "Tool" then
+			InventoryServer.RegisterItem(player, item)
+		end
+	end
+end
+
+-- Reset hotbar slots after character respawn
+function InventoryServer.ResetHotbar(player)
+	local inv = InventoryServer.AllInventories[player]
+	inv.Hotbar = {}  -- Reset hotbar slots
 end
 
 --getting Inventory Data
@@ -284,6 +332,8 @@ function InventoryServer.GetInventoryData(player)
 	--returning
 	return adjustedInv
 end
+
+
 
 --initializing
 function InventoryServer.Start()
