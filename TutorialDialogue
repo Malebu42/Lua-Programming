@@ -1,0 +1,81 @@
+--gui elements
+local gui = script.Parent
+local textBox = script.Parent.textBox
+local textLabel = script.Parent.textBox.TextLabel
+local sound = script.Parent.talkSound
+local NPCName = script.Parent.NPCName
+local YesButton = script.Parent.textBox.YesButton
+local NoButton = script.Parent.textBox.NoButton
+
+--player elements
+local plr = game.Players.LocalPlayer
+local chr = plr.Character
+local humanoid = chr.Humanoid
+
+local dialogueFolder = game.Workspace.dialogueFolder
+
+local TutorialDialogue = dialogueFolder.TutorialDialogue.ProximityPrompt
+
+--hide all gui elements at the start
+NPCName.Visible = false
+gui.Enabled = false
+textBox.Visible = false
+YesButton.Visible = false
+NoButton.Visible = false
+
+local function writeText(text,waitTime)
+	humanoid.WalkSpeed = 0
+	humanoid.JumpPower = 0
+	gui.Enabled = true
+	textBox.Visible = true
+	textLabel.Text = text
+	sound:Play()
+	task.wait(waitTime)
+end
+
+task.wait(2)
+
+local function endDialogue()
+	gui.Enabled = false
+	textBox.Visible = false
+	textLabel.Text = ""
+	humanoid.WalkSpeed = 16
+	humanoid.JumpPower = 50
+end
+
+-- Listen for yes-button clicks
+YesButton.MouseButton1Click:Connect(function()
+	YesButton.Visible = false
+	NoButton.Visible = false
+	writeText("Get rid of the evildoers over there", 4)
+	endDialogue()
+	TutorialDialogue.Enabled = true
+	NPCName.Visible = false
+end)
+
+-- Listen for no-button clicks
+NoButton.MouseButton1Click:Connect(function()
+	YesButton.Visible = false
+	NoButton.Visible = false
+	writeText("I'm sad now", 2)
+	endDialogue()
+	TutorialDialogue.Enabled = true
+	NPCName.Visible = false
+end)
+
+--starts the Dialogue
+TutorialDialogue.Triggered:Connect(function()
+	NPCName.Text = "Bob:"
+	NPCName.Visible = true
+	TutorialDialogue.Enabled = false
+	writeText("Hello there, Traveler",2)
+
+	writeText("Can you help me?", 2)
+	YesButton.Visible = true
+	NoButton.Visible = true
+		
+	--endDialogue()
+	--TutorialDialogue.Enabled = true
+	--NPCName.Visible = false
+end)
+
