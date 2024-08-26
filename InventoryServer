@@ -29,6 +29,53 @@ function InventoryServer.FindStackDataFromId(player, stackId)
 	end
 end
 
+--dropping Item
+function InventoryServer.DropItem(player, stackId)
+	print("DropItem function called for player: ", player, " with stackId: ", stackId)
+	local stackData = InventoryServer.FindStackDataFromId(player, stackId)
+	if not stackData then return end
+	if not stackData.IsDroppable then return end --isDroppable
+	--print(stackData.IsDroppable)
+	
+	--character variables
+	local char = player.Character; if not char then return end
+	if not char then
+		warn("No character found for player: ", player)
+		return
+	end
+	local root = char:FindFirstChild("HumanoidRootPart"); if not root then return end
+	if not root then
+		warn("No HumanoidRootPart found for player: ", player)
+		return
+	end
+	
+	--dropping first item in list
+	--print("found item to drop:" .. stackId)
+	local toolToDrop = stackData.Items[1]
+	print("Tool to drop:", toolToDrop)
+	if toolToDrop then
+		local Handle = toolToDrop:FindFirstChild("Handle")
+		--print("Handle found:", Handle)
+		if Handle then
+			--Handle.CFrame = root.CFrame * CFrame.new(0, 0, -2)
+			Handle.Transparency = 0
+			Handle.CanCollide = true
+			local finalCFrame = root.CFrame * CFrame.new(0, 0, -4)
+			Handle.CFrame = finalCFrame
+			--print("Handle CFrame set to:", finalCFrame)
+			toolToDrop.Parent = workspace
+			--print("Item parent set to workspace")
+			return true
+		else
+			warn("No Handle found on item")
+		end
+	else
+		warn("No tool found in stack")
+	end
+	
+end
+
+
 --equip Item
 function InventoryServer.EquipItem(player, slotNum)
 	--finding correspodning stack
@@ -132,6 +179,7 @@ function InventoryServer.RegisterItem(player, tool)
 			--check iftool is found
 			return --return: item already registered
 				--check if only same items are in a stack
+		
 		elseif stackData.Name == tool.Name and #stackData.Items < InventoryServer.MaxStackData[stackData.ItemType] then
 			--add to stack
 			table.insert(stackData.Items, tool)		
@@ -240,6 +288,11 @@ function InventoryServer.PlayerAdded(player)
 		--on char death
 		local hum = char:WaitForChild("Humanoid")
 		hum.Died:Connect(function()
+			local tool = char:FindFirstChildOfClass("Tool")
+			if tool then
+				tool.Parent = player.Backpack  --readds items correctly after death
+			end
+			
 			print("Character died for player:", player.Name)
 			--reparenting
 			local allItems = player.Backpack:GetChildren()
@@ -253,6 +306,12 @@ function InventoryServer.PlayerAdded(player)
 			-- Wait a short delay to handle any potential replication delays
 			--wait(0.1)
 			local backpack = player:WaitForChild("Backpack")
+			
+			for i,v in pairs(player.Backpack:GetChildren()) do
+				v:Destroy() --removes duplicates
+			end
+			
+			task.wait()
 			
 			for i, item in pairs(script:GetChildren()) do --allItems
 				print("Re-adding item:", item.Name)
@@ -389,6 +448,8 @@ function InventoryServer.Start()
 	Signal.ListenRemote("Inventory:UnequipFromHotbar", InventoryServer.UnequipFromHotbar)
 	Signal.ListenRemote("Inventory:EquipItem", InventoryServer.EquipItem)
 	Signal.ListenRemote("Inventory:UnequipItems", InventoryServer.UnequipItems)
+	Signal.ListenRemote("Inventory:DropItem", InventoryServer.DropItem)
+	print("Listening for Inventory:DropItem on server")
 	
 	--start dropped items loop
 	InventoryServer.StartDroppedItemsLoop()
