@@ -1,0 +1,98 @@
+--quest starting
+	local questSettings = workspace.Bob:WaitForChild("QuestSettings") --previous: .Questsettings
+	local player = game.Players.LocalPlayer
+
+	local quest = player:WaitForChild("Quest")
+	if not quest then
+		warn("Quest folder not found in player. Make sure it is created before this script runs.")
+		return
+	end
+	quest:WaitForChild("QuestGiver").Value = questSettings:WaitForChild("QuestGiverName").Value
+	quest:WaitForChild("QuestTask").Value = questSettings:WaitForChild("QuestTask").Value
+	quest:WaitForChild("QuestReward").Value = questSettings:WaitForChild("QuestReward").Value
+	quest:WaitForChild("QuestRewardCurrency").Value = questSettings:WaitForChild("QuestRewardCurrency").Value
+	quest:WaitForChild("QuestRewardCurrencyFolder").Value = questSettings:WaitForChild("QuestRewardCurrencyFolder").Value
+	quest:WaitForChild("QuestGoal").Value = questSettings:WaitForChild("QuestGoal").Value
+
+	
+	TutorialDialogue.Enabled = true
+	NPCName.Visible = false
+end)
+
+------------------------------------------------------------------------------------------------------------
+--leaderstats
+    local rs = game:GetService("ReplicatedStorage")
+local remotes = rs:WaitForChild("Remotes")
+
+-- the leaderboardstats
+game.Players.PlayerAdded:Connect(function(player)
+	local leaderstats = Instance.new("Folder", player)
+	leaderstats.Name = "leaderstats"
+	
+	local quest = Instance.new("Folder", player)
+	quest.Name = "Quest"
+	
+	local questGiver = Instance.new("StringValue", quest)
+	questGiver.Name = "QuestGiver"
+	
+	local questTask = Instance.new("StringValue", quest)
+	questTask.Name = "QuestTask"
+	
+	local questReward = Instance.new("IntValue", quest)
+	questReward.Name = "QuestReward"
+	
+	print("QuestReward:", quest:WaitForChild("QuestReward").Value)
+	
+	local questRewardCurrency = Instance.new("StringValue", quest)
+	questRewardCurrency.Name = "QuestRewardCurrency"
+
+	local questRewardCurrencyFolder = Instance.new("StringValue", quest)
+	questRewardCurrencyFolder.Name = "QuestRewardCurrencyFolder"
+	
+	local questProgress = Instance.new("IntValue", quest)
+	questProgress.Name = "QuestProgress"
+	
+	local questGoal = Instance.new("IntValue", quest)
+	questGoal.Name = "QuestGoal"
+	
+	print("QuestGoal:", quest:WaitForChild("QuestGoal").Value)
+	
+	local coins = Instance.new("IntValue", leaderstats)
+	coins.Name = "Coins"
+		
+	--testing
+	--print("Children of Quest folder:")
+	--for _, child in ipairs(quest:GetChildren()) do
+		--print(child.Name)
+	--end
+	
+	questProgress:GetPropertyChangedSignal("Value"):Connect(function()
+		if questTask.Value ~= nil then
+			if questProgress.Value >= questGoal.Value then
+				player:WaitForChild(questRewardCurrency.Value):WaitForChild(questRewardCurrencyFolder.Value).Value += questReward.Value
+				for i, v in pairs(quest:GetChildren()) do
+					if v:IsA("StringValue") then
+						v.Value = nil
+					elseif v:IsA("NumberValue") or v:IsA("IntValue") then
+						v.Value = 0
+					end
+				end
+			end
+		end
+	end)
+end)
+
+remotes:WaitForChild("GiveQuest").OnServerEvent:Connect(function(player, questGiver, questTask, questReward, questRewardCurrency, questRewardCurrencyFolder, questGoal)
+	local quest = player:WaitForChild("Quest")
+	quest:WaitForChild("QuestGiver").Value = questGiver
+	quest:WaitForChild("QuestTask").Value = questTask
+	quest:WaitForChild("QuestReward").Value = questReward
+	quest:WaitForChild("QuestGoal").Value = questGoal
+	quest:WaitForChild("QuestRewardCurrency").Value = questRewardCurrency
+	quest:WaitForChild("QuestRewardCurrencyFolder").Value = questRewardCurrencyFolder
+	
+	--print("QuestReward set in Quest folder:", quest:WaitForChild("QuestReward").Value)
+	print("QuestGoal set in Quest folder:", quest:WaitForChild("QuestGoal").Value)
+
+end)
+
