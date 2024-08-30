@@ -1,0 +1,53 @@
+local uis = game:GetService("UserInputService")
+local player = game.Players.LocalPlayer
+local quest = player:WaitForChild("Quest")
+
+local button = script.Parent:WaitForChild("ImageButton")
+local frame = script.Parent:WaitForChild("Frame")
+
+button.MouseButton1Click:Connect(function()
+	frame.Visible = not frame.Visible
+end)
+
+uis.InputBegan:Connect(function(key, gp)
+	if gp then return end
+	if key.KeyCode == Enum.KeyCode.J then
+		frame.Visible = not frame.Visible
+	end
+end)
+
+-- Function to update the quest information
+local function updateQuestUI()
+	print("Updating Quest UI...")
+	local questGiver = quest:FindFirstChild("QuestGiver") and quest:FindFirstChild("QuestGiver").Value or "None"
+	local questTask = quest:FindFirstChild("QuestTask") and quest:FindFirstChild("QuestTask").Value or "No Tasks available"
+	local questReward = quest:FindFirstChild("QuestReward") and quest:FindFirstChild("QuestReward").Value or 0
+	local questRewardCurrency = quest:FindFirstChild("QuestRewardCurrency") and quest:FindFirstChild("QuestRewardCurrency").Value or ""
+	local questProgress = quest:FindFirstChild("QuestProgress") and quest:FindFirstChild("QuestProgress").Value or 0
+	local questGoal = quest:FindFirstChild("QuestGoal") and quest:FindFirstChild("QuestGoal").Value or 0
+
+	print("QuestGiver: ", questGiver)
+	print("QuestTask: ", questTask)
+	print("QuestReward: ", questReward)
+	print("QuestRewardCurrency: ", questRewardCurrency)
+	print("QuestProgress: ", questProgress)
+	print("QuestGoal: ", questGoal)
+
+	-- Update the UI elements with the current quest information
+	frame:WaitForChild("QuestGiver").Text = questGiver ~= "" and questGiver or "None"
+	frame:WaitForChild("QuestTask").Text = questTask ~= "" and questTask or "No Tasks available"
+	frame:WaitForChild("QuestReward").Text = questReward > 0 and questReward .. " " .. questRewardCurrency or "No Rewards"
+	frame:WaitForChild("QuestProgress").Text = questProgress .. " / " .. questGoal
+end
+
+-- Connect the update function to the "Changed" event of relevant quest values
+quest:WaitForChild("QuestGiver").Changed:Connect(updateQuestUI)
+quest:WaitForChild("QuestTask").Changed:Connect(updateQuestUI)
+quest:FindFirstChild("QuestReward").Changed:Connect(updateQuestUI) --broken?
+quest:WaitForChild("QuestRewardCurrency").Changed:Connect(updateQuestUI)
+quest:WaitForChild("QuestProgress").Changed:Connect(updateQuestUI)
+quest:FindFirstChild("QuestGoal").Changed:Connect(updateQuestUI)
+
+-- Initial update
+updateQuestUI()
+
