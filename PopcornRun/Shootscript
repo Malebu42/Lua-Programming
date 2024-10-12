@@ -1,0 +1,114 @@
+-- Services
+local runService = game:GetService("RunService")
+local player_character = game.Players:GetPlayerFromCharacter(script.Parent)
+
+-- Variables
+local enemy = script.Parent
+local shootInterval = 3 -- Time between each set of shots
+local projectileSpeed = 40 -- Speed of the projectile in studs per second
+local projectileCount = 10 -- Number of projectiles in the circle for Phase 4
+local currentPhase = 1 -- Start with phase 1
+local moveSpeed = 50 -- Speed at which the enemy moves during Phase 3
+
+local function hit(projectile, other_part, player_character)
+	projectile:Destroy()
+	local humanoid = other_part.Parent:FindFirstChild("Humanoid")
+	
+	if humanoid then
+		humanoid:TakeDamage(25)
+		task.wait(0.5)
+	end
+	
+end
+
+-- Function to shoot a projectile in a given direction
+local function shootProjectile(direction)
+	local projectile = Instance.new("Part")
+	projectile.Size = Vector3.new(1, 1, 1) -- Set projectile size
+	projectile.Shape = Enum.PartType.Ball -- Make it spherical
+	projectile.BrickColor = BrickColor.new("Cool yellow") -- Color of projectile
+	projectile.CFrame = CFrame.new(enemy.Position.X, enemy.Position.Y, enemy.Position.Z)
+	projectile.Anchored = true -- Keep anchored to prevent physics from affecting it
+	projectile.CanCollide = false
+	projectile.Parent = workspace
+
+	local connection
+	connection = runService.Stepped:Connect(function(_, deltaTime)
+		local moveDistance = projectileSpeed * deltaTime
+		local newPosition = projectile.Position + (direction * moveDistance)
+		projectile.Position = Vector3.new(newPosition.X, enemy.Position.Y, newPosition.Z)
+
+		-- Destroy the projectile if it moves too far away from the enemy
+		if (projectile.Position - enemy.Position).magnitude > 200 then
+			projectile:Destroy()
+			connection:Disconnect()
+		end
+	end)
+
+	-- Destroy the projectile after 5 seconds
+	game.Debris:AddItem(projectile, 5)
+	
+	projectile.Touched:Connect(function(other_part)
+		hit(projectile, other_part, player_character)
+	end)
+	
+end
+
+-- PHASE 1: Multiple shots in straight lines
+local function attack1()
+	local directions = {
+		Vector3.new(1, 0, 0),  -- Right
+		Vector3.new(-1, 0, 0), -- Left
+		Vector3.new(0, 0, 1),  -- Forward
+		Vector3.new(0, 0, -1)  -- Backward
+	}
+	for _ = 1, 5 do -- Shoot 5 times in the cardinal directions
+		for _, direction in ipairs(directions) do
+			shootProjectile(direction)
+		end
+		wait(1) -- Slight delay between each set of shots
+	end
+end
+
+-- PHASE 2: Radial burst (shoot in all directions)
+local function attack2()
+	local angleIncrement = 360 / projectileCount
+	for i = 0, projectileCount - 1 do
+		local angle = math.rad(i * angleIncrement)
+		local direction = Vector3.new(math.cos(angle), 0, math.sin(angle)).unit
+		shootProjectile(direction)
+	end
+end
+
+-- PHASE 3: Spiral shooting
+local function attack3()
+	local angle = 0
+	local spiralSpeed = math.pi / 16 -- Controls how tightly the spiral spins
+	local shootTimes = 40 -- Number of projectiles to shoot in a spiral
+
+	for i = 1, shootTimes do
+		local direction = Vector3.new(math.cos(angle), 0, math.sin(angle)).unit
+		shootProjectile(direction)
+		angle = angle + spiralSpeed
+		wait(0.1) -- Small delay between each shot to make it smooth
+	end
+end
+
+-- Function to switch between attacks
+local function switchAttacks()
+	if currentPhase == 1 then
+		attack1() -- Multiple straight-line shots
+	elseif currentPhase == 2 then
+		attack2() -- Spiral shooting
+	elseif currentPhase == 3 then
+		attack3() -- Radial burst
+	end
+	currentPhase = currentPhase % 3 + 1 -- Cycle through phases
+end
+
+-- Main loop to run the phases at intervals
+while true do
+	switchAttacks()
+	task.wait(1)
+	--wait(shootInterval)
+end
