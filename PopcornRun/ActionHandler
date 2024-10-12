@@ -1,0 +1,26 @@
+local cam = workspace.CurrentCamera --gets camera
+
+local char =  script.Parent
+local hrp = char:WaitForChild("HumanoidRootPart")
+local Humanoid = char:FindFirstChild("Humanoid") --for no jumping
+
+
+cam.CameraType = Enum.CameraType.Scriptable
+
+local cameraPart = Instance.new("Part") --invis part for camera
+cameraPart.Transparency = 1
+cameraPart.CanCollide = false
+cameraPart.Parent = workspace
+cameraPart.CFrame = CFrame.new(hrp.Position + Vector3.new(0, 40, 10), hrp.Position) --places part
+
+local bp = Instance.new("BodyPosition")
+bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+bp.Parent = cameraPart
+Humanoid.Jump = false
+
+game:GetService("RunService").RenderStepped:Connect(function()
+	bp.Position = hrp.Position + Vector3.new(0, 40, 10)
+	cam.CFrame = cameraPart.CFrame
+end)
+
+
