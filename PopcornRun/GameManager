@@ -1,0 +1,55 @@
+-- GameManager (ModuleScript)
+local GameManager = {}
+
+local players = {}
+local isGameActive = false
+local roundTime = 60 -- Time per round in seconds
+local remainingTime = roundTime
+local roundSystem = require(game.ServerScriptService.RoundSystem)
+
+-- Function to start the game
+function GameManager:StartGame()
+	if not isGameActive then
+		isGameActive = true
+		players = game.Players:GetPlayers() -- Get all players in the game
+		for _, player in ipairs(players) do
+			player:LoadCharacter() -- Respawn players at the start
+		end
+		remainingTime = roundTime
+		roundSystem:StartRound() -- Start the first round
+	end
+end
+
+-- Function to end the game
+function GameManager:EndGame()
+	isGameActive = false
+	print("Game Over! Displaying results...")
+	-- Show game results, announce the winner, etc.
+end
+
+-- Function to track surviving players
+function GameManager:CheckPlayers()
+	local alivePlayers = 0
+	for _, player in ipairs(players) do
+		if player.Character and player.Character:FindFirstChild("Humanoid").Health > 0 then
+			alivePlayers = alivePlayers + 1
+		end
+	end
+
+	if alivePlayers <= 0 then
+		GameManager:EndGame() -- End the game if no players are alive
+	end
+end
+
+-- Function to update round timer
+function GameManager:UpdateTimer(deltaTime)
+	if isGameActive then
+		remainingTime = remainingTime - deltaTime
+		if remainingTime <= 0 then
+			roundSystem:NextRound() -- Proceed to the next round
+			remainingTime = roundTime -- Reset round timer
+		end
+	end
+end
+
+return GameManager
