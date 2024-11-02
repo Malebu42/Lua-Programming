@@ -1,0 +1,29 @@
+game.Players.PlayerAdded:Connect(function(player)
+	local leaderstats = Instance.new("Folder")
+	leaderstats.Name = "leaderstats" --creates Folder
+	leaderstats.Parent = player
+	
+	local coins = Instance.new("IntValue") --create variable
+	coins.Name = "Coins"
+	coins.Value = 0
+	coins.Parent = leaderstats --put coins into leaderstats
+end)
+
+--local coinpart = game.Workspace.Coins.CoinPart
+local coinsFolder = game.Workspace:WaitForChild("Coins") --gets Coinfolder
+
+for _, coinpart in pairs(coinsFolder:GetChildren()) do --loops folder
+	local touchedPart = false
+	
+	coinpart.Touched:Connect(function(otherpart) --checks for touch
+		if otherpart.Parent:FindFirstChild("Humanoid") then --check for human touching 
+			if touchedPart == false then
+				touchedPart = true  --prevents double pickup
+				local player = game.Players:GetPlayerFromCharacter(otherpart.Parent) --get player who touched coin
+				player.leaderstats.Coins.Value = player.leaderstats.Coins.Value + 1 --acces "Coins" in leaderstats
+				coinpart:Destroy()
+			end
+		end
+	end)
+end
+
