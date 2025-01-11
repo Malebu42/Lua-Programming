@@ -1,0 +1,30 @@
+local buyButtonRemote = game.ReplicatedStorage.BuyButton
+
+local gui = script.Parent
+local prompt = gui.Frame.Prompt
+local buyButton = gui.Frame.BuyButton
+
+
+buyButton.MouseButton1Click:Connect(function() --calls remote function
+	local purchaseSuccesful = buyButtonRemote:InvokeServer()
+	
+	--code here if boolean is true
+	if purchaseSuccesful then
+		prompt.Text = "Purchase Successful!"
+		prompt.Transparency = 0
+		prompt.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+		task.wait(1)
+		prompt.Transparency = 1
+		prompt.Text = " "
+		
+	else
+		prompt.Text = "Not enough money"
+		prompt.Transparency = 0
+		prompt.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+		task.wait(1)
+		prompt.Transparency = 1
+		prompt.Text = " "
+	end
+	
+	
+end)
