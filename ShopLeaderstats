@@ -1,0 +1,76 @@
+local greetPlayer = game.ReplicatedStorage.GreetPlayer
+local giveAnnouncement = game.ReplicatedStorage.giveAnnouncement
+
+game.Players.PlayerAdded:Connect(function(plr) --playeradded event
+	local leaderstats = Instance.new("Folder", plr)
+	leaderstats.Name = "leaderstats"
+	
+	local coins = Instance.new("IntValue", leaderstats) --create value
+	coins.Name = "Coins"
+	coins.Value = 25
+	
+	greetPlayer:FireClient(plr, "Hello "..plr.DisplayName.." !") --call client
+end)
+
+local giveCurrency = game.ReplicatedStorage.GiveCurrency
+
+giveCurrency.OnServerEvent:Connect(function(player, coinsAmount) --catches fired event
+	local leaderstats = player.leaderstats
+	local coins = leaderstats.Coins
+	
+	print("Coins added")
+	coins.Value += coinsAmount
+end)
+
+--task.wait(10)
+--giveAnnouncement:FireAllClients() --all players mentioned
+
+--Buy button Part:
+local buyButtonRemote = game.ReplicatedStorage.BuyButton
+local buyButtonRemotetwo = game.ReplicatedStorage.BuyButtonTwo
+local buyButtonRemotethree = game.ReplicatedStorage.BuyButtonThree
+
+--syntax!
+buyButtonRemote.OnServerInvoke = function(plr)
+	local purchaseSuccessful = false
+	
+	local leaderstats = plr.leaderstats
+	local coins = leaderstats.Coins
+	
+	if coins.Value >= 50 then
+		coins.Value -= 50
+		purchaseSuccessful = true
+	end
+	
+	return purchaseSuccessful
+end
+
+--for two
+buyButtonRemotetwo.OnServerInvoke = function(plr)
+	local purchaseSuccessful = false
+
+	local leaderstats = plr.leaderstats
+	local coins = leaderstats.Coins
+
+	if coins.Value >= 500 then
+		coins.Value -= 500
+		purchaseSuccessful = true
+	end
+
+	return purchaseSuccessful
+end
+
+--for three
+buyButtonRemotethree.OnServerInvoke = function(plr)
+	local purchaseSuccessful = false
+
+	local leaderstats = plr.leaderstats
+	local coins = leaderstats.Coins
+
+	if coins.Value >= 100 then
+		coins.Value -= 100
+		purchaseSuccessful = true
+	end
+
+	return purchaseSuccessful
+end
