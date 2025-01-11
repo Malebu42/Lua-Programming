@@ -1,0 +1,21 @@
+local gui = script.Parent
+local giveButton = gui.GiveCurrency
+
+local giveCurrency = game.ReplicatedStorage.GiveCurrency --reference to remote event
+
+giveButton.MouseButton1Click:Connect(function()
+	giveCurrency:FireServer(50) --fire event
+end)
+
+local greetPlayer = game.ReplicatedStorage.GreetPlayer
+local greetingLabel = gui.Greeting
+
+greetPlayer.OnClientEvent:Connect(function(message) --catches event from server
+	greetingLabel.Text = message
+end)
+
+local giveAnnouncement = game.ReplicatedStorage.giveAnnouncement
+
+giveAnnouncement.OnClientEvent:Connect(function()
+	gui.Announcement.Visible = true
+end)
