@@ -1,0 +1,10 @@
+local player = game.Players.PlayerAdded:Wait()
+local char = player.CharacterAdded:Wait()
+local pet = workspace:WaitForChild("Pet")
+
+local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+
+while true do
+	workspace.Pet.CFrame = torso.CFrame:ToWorldSpace(CFrame.new(0,0,5))
+	task.wait(0.01)
+end
