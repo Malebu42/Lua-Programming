@@ -8,3 +8,4 @@ while true do
 	workspace.Pet.CFrame = torso.CFrame:ToWorldSpace(CFrame.new(0,0,5))
 	task.wait(0.01)
 end
+--add a part called "Pet"
