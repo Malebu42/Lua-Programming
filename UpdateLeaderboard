@@ -1,0 +1,89 @@
+local DataStoreService = game:GetService("DataStoreService")
+local PlayerMoney = DataStoreService:GetOrderedDataStore("PlayerMoney")
+local Debris = game:GetService("Debris") -- Get Debris service
+
+local item = script:WaitForChild("Item")
+local playersContainer = script.Parent.LeaderboardGui.LeaderboardContainer.PlayersContainer
+
+task.wait(0.1)
+
+game.Players.PlayerAdded:Connect(function(plr)
+	--local leaderstats = Instance.new("Folder", plr) -- ,plr here short for leaderstats.Parent = plr
+	local leaderstats = plr:FindFirstChild("leaderstats")
+	leaderstats.Parent = plr
+	
+	local coins = plr:FindFirstChild("Coins")
+--	local coins = Instance.new("IntValue", leaderstats)
+	--coins.Name = "Coins2"
+	
+	
+	while true do
+		task.wait(5)
+		
+		local success, errorMsg= pcall(function()
+			PlayerMoney:SetAsync(plr.UserId, coins.Value)
+		end)
+		if not success then
+			print(errorMsg)
+		end
+	end
+end)
+
+while true do
+	task.wait(5)
+	
+	local success, pages = pcall(function()
+		return PlayerMoney:GetSortedAsync(false, 10)
+	end)
+	
+	if success then
+		
+		local entries = pages:GetCurrentPage()
+		
+		--new players
+		local addedPlayers = {}
+		
+		for rank, entry in pairs(entries) do
+			
+			local clonedItem = item:Clone()
+			
+			--local username = game.Players:GetNameFromUserIdAsync(entry.key)
+			local entries = pages:GetCurrentPage()
+			
+			-- Debugging: Check how many entries are being processed
+			print("Updating leaderboard with", #entries, "players")
+			
+			local successName, result = pcall(function()
+				return game.Players:GetNameFromUserIdAsync(entry.key)
+			end)
+
+			if successName then
+				username = result
+			else
+				warn("Failed to get username for ID: " .. entry.key)
+			end
+			
+			-- Debugging: Print each entry
+			print("Adding player:", username, "with rank:", rank, "and money:", entry.value)
+
+			
+			if username then
+				--change items description before cloning
+				clonedItem.Name = username
+				clonedItem.NameText.Text = username
+				
+				--previous after the next "end"
+				clonedItem.CashText.Text = entry.value
+				clonedItem.RankText.Text = rank
+
+				clonedItem.Parent = playersContainer	
+			end
+			
+			
+			
+			Debris:AddItem(clonedItem, 6)
+			
+		end
+		
+	end
+end
