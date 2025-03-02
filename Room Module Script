@@ -1,0 +1,87 @@
+local room = {}
+room.info = require(script.RoomInfo)
+room.lastTurnDirection = nil
+room.random = Random.new()
+
+function room.GetRandom(prevRoom)
+	local totalWeight = 0
+	for i, info in pairs(room.info) do
+		totalWeight += info.Weight
+	end
+	
+	local randomWeight = room.random:NextInteger(1, totalWeight)
+	local currentWeight = 0
+	local randomRoom = nil
+	for i, info in pairs(room.info) do
+		currentWeight += info.Weight
+		if randomWeight <= currentWeight then
+			randomRoom = workspace.Rooms[i]
+			break
+		end
+	end
+	
+	--local possibleRooms = workspace.Rooms:GetChildren()
+	--local randomRoom = possibleRooms[room.random:NextInteger(1, #possibleRooms)]
+	
+	local direction = room.info[randomRoom.Name]["Direction"]
+	local hasStairs = room.info[randomRoom.Name]["Stairs"]
+	local prevHadStairs = room.info[prevRoom.Name]["Stairs"]
+	
+	
+	if (prevRoom.Name == randomRoom.Name)
+		or (direction and direction == room.lastTurnDirection)
+		or (hasStairs and prevHadStairs) 
+	then
+		return room.GetRandom(prevRoom)		
+	else
+		if direction then
+			room.lastTurnDirection = direction
+		end
+		
+		return randomRoom
+	end
+end
+
+function room.Generate(prevRoom)
+	local randomRoom = room.GetRandom(prevRoom)
+	local newRoom = randomRoom:Clone()
+	
+	newRoom.PrimaryPart = newRoom.Entrance
+	newRoom:PivotTo(prevRoom.Exit.CFrame)
+	newRoom.Entrance.Transparency = 1
+	newRoom.Exit.Transparency = 1
+	
+	-- Add temporary hitbox for collision detection
+	local hitbox = Instance.new("Part")
+	hitbox.Size = newRoom:GetExtentsSize() + Vector3.new(2, 2, 2) -- Slightly larger than the room
+	hitbox.Position = newRoom.PrimaryPart.Position
+	hitbox.Anchored = true
+	hitbox.Transparency = 1
+	hitbox.CanCollide = false
+	hitbox.Parent = newRoom
+
+	task.wait(0.05) -- Small delay to ensure hitbox registers
+
+	-- Check if the hitbox is touching any other generated room
+	local overlapping = false
+	for _, part in pairs(hitbox:GetTouchingParts()) do
+		if part:IsDescendantOf(workspace.GeneratedRooms) then
+			overlapping = true
+			break
+		end
+	end
+
+	-- Remove invalid room and retry if it overlaps
+	if overlapping then
+		newRoom:Destroy()
+		return room.Generate(prevRoom) -- Try generating a new room
+	end
+
+	-- If valid, parent it to the workspace	
+	newRoom.Parent = workspace.GeneratedRooms	
+	hitbox:Destroy() -- Remove hitbox after check
+		
+	return newRoom
+end
+
+return room
