@@ -1,0 +1,7 @@
+local Players = game:GetService("Players")
+
+Players.PlayerAdded:Connect(function(Player)
+	for _, v in script.PlayerValues:GetChildren() do --gets all of the variables inside of "Values/Character"
+		v:Clone().Parent = Player --clones the "Values/Character" string to the player
+	end
+end)
