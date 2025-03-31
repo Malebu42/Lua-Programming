@@ -1,0 +1,41 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+
+local Events = ReplicatedStorage.Events
+local AttackHitboxes = require(script.Parent.AttackHitboxes)
+
+local ClickAttackDebounces = {}
+
+Events.ClickAttack.OnServerEvent:Connect(function(Player)
+	local Character = Player.Character
+	if Character == nil then
+		return --end if char not there
+	end
+	local humanoid = Character:FindFirstChild("Humanoid")
+	if humanoid == nil then
+		return --end if no humanoid
+	end
+	if humanoid.Health < 0 then
+		return --end if health under zero
+	end
+	if ClickAttackDebounces[Player] then
+		return --return debounces
+	end
+	
+	ClickAttackDebounces[Player] = true
+	local PunchCombo = Player.Values.PunchCombo
+	local Animation = script.PunchAnimationCycle[tostring(PunchCombo.Value)]
+	local LoadedPunchAnimation = humanoid.Animator:LoadAnimation(Animation) --gets the punch animation
+	LoadedPunchAnimation:Play()
+	
+	if PunchCombo.Value >= #script.PunchAnimationCycle:GetChildren() then
+		PunchCombo.Value = 1 --loops to start
+	else
+		PunchCombo.Value += 1 --loops one forward
+	end
+	
+	task.wait(LoadedPunchAnimation.Length + 0.1) --waits for animation to finish
+	if ClickAttackDebounces[Player] then
+		ClickAttackDebounces[Player]  = nil --remove debounce after hit
+	end
+end)
