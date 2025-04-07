@@ -1,0 +1,106 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Events = ReplicatedStorage:WaitForChild("Events")
+local CraterRocks = workspace:WaitForChild("CoreObjects"):WaitForChild("CraterRocks")
+
+local Circle = math.pi * 2
+local RNG = Random.new()
+
+local DownDirection = Vector3.new(0, 100, 0)
+
+local module = {}
+
+local function GetXAndZPositions(Radius, Angle)
+	local X = math.cos(Angle) * Radius
+	local Z = math.sin(Angle) * Radius
+	return X, Z
+end
+
+function module.CreateCrater(OriginPosition, AmountOfRocks, Radius, Duration, SizeMultiplier)
+	if SizeMultiplier == nil then
+		SizeMultiplier = 1
+	end
+	
+	local IgnoreList = {CraterRocks}
+	for _, v in Players:GetPlayers() do
+		local Character = v.Character
+		
+		if Character then
+			table.insert(IgnoreList, Character)
+		end
+	end
+	
+	local RayParams = RaycastParams.new()
+	RayParams.FilterDescendantsInstances = IgnoreList
+	RayParams.FilterType = Enum.RaycastFilterType.Exclude
+	
+	--new
+	local SpawnedRocks = {}
+	
+	for i = 1, AmountOfRocks do
+		local Angle = i * (Circle / AmountOfRocks)
+		local X, Z = GetXAndZPositions(Radius, Angle)
+		
+		local RockSizeMultiplier = RNG:NextNumber(1, 1.6)
+		local RockSize = Vector3.new(RNG:NextNumber(2, 4) * RockSizeMultiplier, RNG:NextNumber(2, 4) * RockSizeMultiplier, RNG:NextNumber(2, 4) * RockSizeMultiplier) * SizeMultiplier
+		
+		local OriginPositionsWithoutY = Vector3.new(OriginPosition.X, 0, OriginPosition.Z)
+		local XZPosition = (CFrame.new(OriginPositionsWithoutY) * CFrame.new(X, 0 , Z)).Position
+		
+		-- Move the ray's start position *upwards* by 10 studs from XZPosition
+		local RayStart = XZPosition + Vector3.new(0, 10, 0)
+
+		-- Now cast the ray *downward*
+		local RayResult = workspace:Raycast(RayStart, Vector3.new(0, -100, 0), RayParams)
+
+		print("Raycast from:", RayStart)
+		--local RayResult = workspace:Raycast(XZPosition * Vector3.new(0, 10, 0), DownDirection, RayParams)
+		
+		if RayResult then
+			-- Output the result of the raycast (what it hit and where)
+			print("Raycast hit:", RayResult.Instance, "at position:", RayResult.Position)
+
+			local Rock = Instance.new("Part")
+			Rock.Size = RockSize
+			Rock.Material = RayResult.Material
+			Rock.Color = RayResult.Instance.Color
+			Rock.Anchored = true
+			Rock.CanCollide = true
+			Rock.Parent = CraterRocks
+			
+			--new
+			table.insert(SpawnedRocks, Rock)
+			
+			-- Calculate the final position of the rock based on the raycast hit and some other variables (without Y coordinate)
+			local FinalRockPosition = (CFrame.new(OriginPositionsWithoutY) * CFrame.new(X, RayResult.Position.Y, Z)).Position
+			-- Calculate the final orientation of the rock with some random rotation
+			local FinalRockCFrame = CFrame.new(FinalRockPosition, OriginPositionsWithoutY) * CFrame.Angles(math.rad(RNG:NextInteger(-60, 60)), math.rad(RNG:NextInteger(-60, 60)), math.rad(RNG:NextInteger(-60, 60)))
+			
+			print("Spawning rock at:", FinalRockPosition)
+			-- Set the position of the rock slightly above the ground and animate it to the final position
+			Rock.Position = FinalRockPosition + Vector3.new(0, 8, 0)
+			-- Create a tween animation to move the rock into the FinalRockposition
+			TweenService:Create(Rock, TweenInfo.new(0.1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {CFrame = FinalRockCFrame}):Play() 
+			
+			-- After a delay, destroy all rocks in the list
+			task.delay(Duration, function()
+				for _, Rock in ipairs(SpawnedRocks) do
+					--loop list
+					TweenService:Create(Rock, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = FinalRockPosition + Vector3.new(0, 8, 0)}):Play()
+				end
+						
+				task.wait(0.1)
+				for _, Rock in ipairs(SpawnedRocks) do
+					--destroy all rocks in the list
+					Rock:Destroy()
+				end
+			end)
+		else
+			print("Raycast missed at:", RayStart)
+		end
+	end
+end
+
+return module
